@@ -1,0 +1,9 @@
+{
+  "verb": "pick",
+  "app": "migrate",
+  "message": "Which database should the migration run against?",
+  "options": [
+    {"id": "staging", "label": "Staging", "detail": "Safe to run again"},
+    {"id": "prod", "label": "Production", "detail": "Locks the orders table for about a minute"}
+  ]
+}

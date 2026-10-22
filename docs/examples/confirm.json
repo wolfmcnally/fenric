@@ -1,0 +1,10 @@
+{
+  "verb": "confirm",
+  "app": "deploy.sh",
+  "title": "Deploy to production",
+  "message": "Deploy release 2.4.1 to production now?",
+  "detail": "The release passed staging an hour ago. Deploying takes about four minutes.",
+  "yes_label": "Deploy",
+  "no_label": "Not now",
+  "timeout": 60
+}

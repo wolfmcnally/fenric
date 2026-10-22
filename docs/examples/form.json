@@ -1,0 +1,18 @@
+{
+  "verb": "form",
+  "app": "release.py",
+  "title": "Release notes",
+  "components": [
+    {"type": "text", "text": "Fill in what the changelog needs for this release."},
+    {"type": "field", "id": "summary", "label": "One-line summary", "required": true},
+    {"type": "select", "id": "kind", "label": "Kind of release", "options": ["patch", "minor", "major"], "required": true},
+    {
+      "type": "card",
+      "title": "Announcement",
+      "children": [
+        {"type": "checkbox", "id": "announce", "label": "Post to the mailing list", "checked": true},
+        {"type": "field", "id": "notes", "label": "Anything else to mention", "multiline": true}
+      ]
+    }
+  ]
+}

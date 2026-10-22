@@ -1,0 +1,19 @@
+{
+  "title": "Screenshot comments",
+  "message": "Review these sample layouts. Comments are optional.",
+  "timeout": 3600,
+  "images": [
+    {
+      "id": "mobile",
+      "name": "Mobile layout",
+      "caption": "Synthetic portrait example, 320 pixels wide.",
+      "file": "gallery-first.png"
+    },
+    {
+      "id": "wide",
+      "name": "Wide layout",
+      "caption": "Synthetic landscape example, 1280 pixels wide.",
+      "file": "gallery-second.png"
+    }
+  ]
+}

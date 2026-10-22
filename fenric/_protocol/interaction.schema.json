@@ -1,0 +1,927 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fenric:operator-response:v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Availability"
+    },
+    {
+      "$ref": "#/$defs/Invalidate"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    },
+    {
+      "$ref": "#/$defs/WorkerReceipt"
+    },
+    {
+      "$ref": "#/$defs/DeliveryDisposition"
+    },
+    {
+      "$ref": "#/$defs/Terminal"
+    }
+  ],
+  "$defs": {
+    "Native": {
+      "type": "object",
+      "properties": {
+        "harness": {
+          "enum": [
+            "claude",
+            "codex"
+          ]
+        },
+        "route": {
+          "enum": [
+            "claude.question",
+            "claude.approval",
+            "codex.question",
+            "codex.command",
+            "codex.file",
+            "codex.elicitation",
+            "host.secret"
+          ]
+        },
+        "method": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "thread_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_use_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approval_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "started_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agent_id": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "harness",
+        "route",
+        "method",
+        "request_id",
+        "thread_id",
+        "turn_id",
+        "item_id",
+        "tool_use_id",
+        "approval_id",
+        "started_at_ms",
+        "agent_id"
+      ],
+      "additionalProperties": false
+    },
+    "Destination": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FileDestination"
+        },
+        {
+          "$ref": "#/$defs/StoreDestination"
+        }
+      ]
+    },
+    "DecisionContext": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "const": "fenric.operator-response.v1"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1
+        },
+        "participant": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "session": {
+          "type": "string",
+          "minLength": 1
+        },
+        "native": {
+          "$ref": "#/$defs/Native"
+        },
+        "kind": {
+          "enum": [
+            "question",
+            "approval",
+            "secret"
+          ]
+        },
+        "original": {
+          "type": "object"
+        },
+        "response_schema": {
+          "type": "object"
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "enum": [
+                "structured-answer",
+                "one-call-tool",
+                "secret-destination"
+              ]
+            },
+            "tool": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "category",
+            "tool"
+          ],
+          "additionalProperties": false
+        },
+        "principal_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_surfaces": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "local",
+              "remote"
+            ]
+          }
+        },
+        "issued_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expires_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Destination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "presentation": {
+          "type": "object",
+          "properties": {
+            "mapping": {
+              "type": "string",
+              "minLength": 1
+            },
+            "spec": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "mapping",
+            "spec"
+          ],
+          "additionalProperties": false
+        },
+        "expected_observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExpectedObservation"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "protocol",
+        "interaction_id",
+        "audience",
+        "host",
+        "environment",
+        "project",
+        "participant",
+        "session",
+        "native",
+        "kind",
+        "original",
+        "response_schema",
+        "choices",
+        "scope",
+        "principal_policy",
+        "allowed_surfaces",
+        "issued_at_ms",
+        "expires_at_ms",
+        "destination",
+        "presentation",
+        "expected_observations"
+      ],
+      "additionalProperties": false
+    },
+    "TransportBinding": {
+      "type": "object",
+      "properties": {
+        "adapter_instance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "host_generation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderer_instance": {
+          "type": "string",
+          "minLength": 1
+        },
+        "channel_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "adapter_instance",
+        "host_generation",
+        "renderer_instance",
+        "channel_id"
+      ],
+      "additionalProperties": false
+    },
+    "Observation": {
+      "type": "object",
+      "properties": {
+        "observed_subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authentication_basis": {
+          "enum": [
+            "local_process_uid",
+            "tailscale_user_login"
+          ]
+        },
+        "node": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "surface": {
+          "enum": [
+            "local",
+            "remote"
+          ]
+        },
+        "policy_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "observed_subject",
+        "authentication_basis",
+        "node",
+        "session",
+        "observation_id",
+        "observed_at_ms",
+        "surface",
+        "policy_ref"
+      ],
+      "additionalProperties": false
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "enum": [
+            "not_applicable",
+            "not_started",
+            "completed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Destination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "detail": {
+          "enum": [
+            "none",
+            "validation-refused",
+            "write-failed",
+            "partial-write",
+            "completion-unproved"
+          ]
+        },
+        "destination_confirmed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "outcome",
+        "destination",
+        "filled",
+        "skipped",
+        "detail",
+        "destination_confirmed"
+      ],
+      "additionalProperties": false
+    },
+    "ResponseEnvelope": {
+      "type": "object",
+      "properties": {
+        "protocol": {
+          "const": "fenric.operator-response.v1"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "expires_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "settlement_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "collection": {
+          "enum": [
+            "answered",
+            "cancelled",
+            "expired",
+            "unavailable",
+            "error",
+            "superseded"
+          ]
+        },
+        "answer": {},
+        "observation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Observation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effect": {
+          "$ref": "#/$defs/Effect"
+        }
+      },
+      "required": [
+        "protocol",
+        "interaction_id",
+        "decision_digest",
+        "transport",
+        "expires_at_ms",
+        "settlement_id",
+        "collection",
+        "answer",
+        "observation",
+        "effect"
+      ],
+      "additionalProperties": false
+    },
+    "Request": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "request"
+        },
+        "context": {
+          "$ref": "#/$defs/DecisionContext"
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        }
+      },
+      "required": [
+        "type",
+        "context",
+        "decision_digest",
+        "transport"
+      ],
+      "additionalProperties": false
+    },
+    "Availability": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "availability"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "surface": {
+          "enum": [
+            "local",
+            "remote"
+          ]
+        },
+        "state": {
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "protected_capability": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "interaction_id",
+        "transport",
+        "surface",
+        "state",
+        "protected_capability"
+      ],
+      "additionalProperties": false
+    },
+    "Invalidate": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "invalidate"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "reason": {
+          "enum": [
+            "cancelled",
+            "superseded",
+            "revoked",
+            "host-resolved",
+            "expired",
+            "error"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "interaction_id",
+        "transport",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "Response": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "response"
+        },
+        "response": {
+          "$ref": "#/$defs/ResponseEnvelope"
+        }
+      },
+      "required": [
+        "type",
+        "response"
+      ],
+      "additionalProperties": false
+    },
+    "WorkerReceipt": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "worker_receipt"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "settlement_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": [
+            "received",
+            "refused",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "interaction_id",
+        "decision_digest",
+        "transport",
+        "settlement_id",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    "DeliveryDisposition": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "delivery_disposition"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "settlement_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "native": {
+          "$ref": "#/$defs/Native"
+        },
+        "outcome": {
+          "enum": [
+            "delivered",
+            "refused",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "enum": [
+            "native-resolution",
+            "callback-return",
+            "not-submitted",
+            "submission-unproved"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "interaction_id",
+        "decision_digest",
+        "transport",
+        "settlement_id",
+        "native",
+        "outcome",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "Terminal": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "terminal"
+        },
+        "interaction_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "$ref": "#/$defs/TransportBinding"
+        },
+        "state": {
+          "enum": [
+            "closed",
+            "failed"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "interaction_id",
+        "transport",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "FileDestination": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "file"
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolved_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "enum": [
+            "dotenv",
+            "flat-json",
+            "single-value"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "host",
+        "resolved_path",
+        "format",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "StoreDestination": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "store-command"
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolved_executable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argv_by_field": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "argv": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "field",
+              "argv"
+            ],
+            "additionalProperties": false
+          },
+          "uniqueItems": true
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "host",
+        "cwd",
+        "resolved_executable",
+        "argv_by_field",
+        "fields"
+      ],
+      "additionalProperties": false
+    },
+    "ExpectedObservation": {
+      "type": "object",
+      "properties": {
+        "surface": {
+          "enum": [
+            "local",
+            "remote"
+          ]
+        },
+        "observed_subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authentication_basis": {
+          "enum": [
+            "local_process_uid",
+            "tailscale_user_login"
+          ]
+        },
+        "node": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "surface",
+        "observed_subject",
+        "authentication_basis",
+        "node",
+        "session"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

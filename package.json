@@ -1,0 +1,10 @@
+{
+  "name": "fenric-ui",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "d3": "^7.9.0",
+    "typescript": "^7.0.2"
+  }
+}

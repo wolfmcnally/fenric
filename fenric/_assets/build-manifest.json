@@ -1,0 +1,60 @@
+{
+  "bundled": {
+    "d3": "7.9.0",
+    "d3-array": "3.2.4",
+    "d3-axis": "3.0.0",
+    "d3-brush": "3.0.0",
+    "d3-chord": "3.0.1",
+    "d3-color": "3.1.0",
+    "d3-contour": "4.0.2",
+    "d3-delaunay": "6.0.4",
+    "d3-dispatch": "3.0.1",
+    "d3-drag": "3.0.0",
+    "d3-dsv": "3.0.1",
+    "d3-ease": "3.0.1",
+    "d3-fetch": "3.0.1",
+    "d3-force": "3.0.0",
+    "d3-format": "3.1.2",
+    "d3-geo": "3.1.1",
+    "d3-hierarchy": "3.1.2",
+    "d3-interpolate": "3.0.1",
+    "d3-path": "3.1.0",
+    "d3-polygon": "3.0.1",
+    "d3-quadtree": "3.0.1",
+    "d3-random": "3.0.1",
+    "d3-scale": "4.0.2",
+    "d3-scale-chromatic": "3.1.0",
+    "d3-selection": "3.0.0",
+    "d3-shape": "3.2.0",
+    "d3-time": "3.1.0",
+    "d3-time-format": "4.1.0",
+    "d3-timer": "3.0.1",
+    "d3-transition": "3.0.1",
+    "d3-zoom": "3.0.0",
+    "delaunator": "5.1.0",
+    "internmap": "2.0.3",
+    "robust-predicates": "3.0.3"
+  },
+  "inputs": {
+    "assets/ts/chrome.ts": "e18d83d9f8e19a24492cd5ad30b41fc9fe8db9b0cd27eb91f473dc93b88287d3",
+    "assets/ts/d3-runtime.ts": "142d716e5e342283b56c0201bfbd81a14fadec955f122d87d370293cb9738279",
+    "assets/ts/remote.ts": "19cfedfbdeb4bce3d3a158e511b65207f9d6ed8a875fe69e2e918c37ccb05477",
+    "build_assets.py": "b1cb851e10d6992d3e2570d4a292439bd465a451b985930aa53f0c4ece919da4",
+    "bun.lock": "09b3bb8873208092e84f28a5ae75a8e5e4b5223ebc5fa44b7b7cc620a581a16b",
+    "package.json": "4336b5eb697a1cd434079b1db18b401a9759fa190e10602217047e6d484407a5",
+    "tsconfig.json": "1295a6161f7a4c4d745c5dca18f085b0099ed11693c6063f1894a05df4055213"
+  },
+  "outputs": {
+    "fenric/_assets/THIRD_PARTY_NOTICES.md": "2a86245bc9c3fab4f6defaf574b3e7a651a35075b011f44ae5d2bbadf71c3c92",
+    "fenric/_assets/chrome.js": "7b0ea04590d222e0740d5588ae10f4510531a8cbc56083b19e0ea87b2aafb4ed",
+    "fenric/_assets/d3.js": "e814b62861dc22d5a347264f6136d4ec9d922b27a9b9f54e6eeacb6c40fe3eeb",
+    "fenric/_assets/remote.js": "c3ad7bfde6bebd205e58aa5323c6d2796367cb1d1c809cfb65751376935b8aa9",
+    "fenric/_toolchain/bun.lock": "09b3bb8873208092e84f28a5ae75a8e5e4b5223ebc5fa44b7b7cc620a581a16b",
+    "fenric/_toolchain/package.json": "4336b5eb697a1cd434079b1db18b401a9759fa190e10602217047e6d484407a5",
+    "fenric/_toolchain/tsconfig.json": "1295a6161f7a4c4d745c5dca18f085b0099ed11693c6063f1894a05df4055213"
+  },
+  "tools": {
+    "bun": "1.3.6",
+    "typescript": "Version 7.0.2"
+  }
+}

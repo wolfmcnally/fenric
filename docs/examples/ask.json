@@ -1,0 +1,16 @@
+{
+  "verb": "ask",
+  "app": "Coding agent",
+  "title": "New project",
+  "message": "A few choices before I create the repository.",
+  "questions": [
+    {"id": "name", "prompt": "What should the project be called?"},
+    {
+      "id": "license",
+      "prompt": "Which license?",
+      "options": ["MIT", "Apache-2.0", {"id": "none", "label": "No license", "detail": "All rights reserved"}],
+      "other": true
+    },
+    {"id": "extras", "prompt": "What should I set up now?", "kind": "multi", "options": ["tests", "docs", "ci"]}
+  ]
+}

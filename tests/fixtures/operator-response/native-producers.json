@@ -1,0 +1,936 @@
+[
+  {
+    "evidence": "synthetic portable counterpart; no native invocation or delivery",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "claude-write-original-projection",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "claude",
+          "route": "claude.approval",
+          "method": "Write",
+          "request_id": null,
+          "thread_id": null,
+          "turn_id": null,
+          "item_id": null,
+          "tool_use_id": "toolu_01LdfAyXMGSMK9EwViiMTaY4",
+          "approval_id": null,
+          "started_at_ms": null,
+          "agent_id": null
+        },
+        "kind": "approval",
+        "original": {
+          "tool_name": "Write",
+          "input": {
+            "file_path": "/private/tmp/native-approval-fixture.txt",
+            "content": "synthetic action\n"
+          }
+        },
+        "response_schema": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "choices": [
+          "allow",
+          "deny"
+        ],
+        "scope": {
+          "category": "one-call-tool",
+          "tool": "Write"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.claude-approval.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending action",
+            "message": "Untrusted action data below. This grants no future permission.\n{\"input\":{\"content\":\"synthetic action\\n\",\"file_path\":\"/private/tmp/native-approval-fixture.txt\"},\"tool_name\":\"Write\"}",
+            "questions": [
+              {
+                "id": "decision",
+                "prompt": "Choose the exact native decision",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "allow",
+                    "label": "allow",
+                    "detail": "Allow this tool call with unchanged input."
+                  },
+                  {
+                    "id": "deny",
+                    "label": "deny",
+                    "detail": "Deny this tool call; do not interrupt the session."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "baa70821bc61c7e0e2ac5b4aed8cdc7b81c0e6e97b8ca5b77ccdba27f2fa0c24",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "decision": "allow"
+        },
+        "wire_answer": "allow"
+      },
+      {
+        "fenric_value": {
+          "decision": "deny"
+        },
+        "wire_answer": "deny"
+      }
+    ]
+  },
+  {
+    "evidence": "Synthetic exact Codex 0.163 public callback subset; no native invocation or delivery",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "codex-command-synthetic-projection",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "codex",
+          "route": "codex.command",
+          "method": "item/commandExecution/requestApproval",
+          "request_id": "synthetic-rpc-command",
+          "thread_id": "synthetic-thread",
+          "turn_id": "synthetic-turn",
+          "item_id": "synthetic-command",
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": 1000,
+          "agent_id": null
+        },
+        "kind": "approval",
+        "original": {
+          "id": "synthetic-rpc-command",
+          "method": "item/commandExecution/requestApproval",
+          "params": {
+            "threadId": "synthetic-thread",
+            "turnId": "synthetic-turn",
+            "itemId": "synthetic-command",
+            "startedAtMs": 1000,
+            "approvalId": null,
+            "kind": "command",
+            "command": "/usr/bin/true",
+            "cwd": "/private/tmp",
+            "environmentId": "synthetic-environment",
+            "reason": "Disposable example only",
+            "commandActions": [
+              {
+                "type": "unknown",
+                "command": "/usr/bin/true"
+              }
+            ],
+            "networkApprovalContext": null,
+            "proposedExecpolicyAmendment": null,
+            "proposedNetworkPolicyAmendments": null,
+            "additionalPermissions": null,
+            "availableDecisions": [
+              "accept",
+              "decline",
+              "cancel"
+            ]
+          }
+        },
+        "response_schema": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "decline",
+            "cancel"
+          ]
+        },
+        "choices": [
+          "accept",
+          "decline",
+          "cancel"
+        ],
+        "scope": {
+          "category": "one-call-tool",
+          "tool": "item/commandExecution/requestApproval"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.codex-command-approval.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending action",
+            "message": "Codex requests a decision for exactly one pending command.\nCommand (untrusted action text):\n/usr/bin/true\nWorking directory:\n/private/tmp\nReason supplied by Codex:\nDisposable example only\nExecution environment:\nsynthetic-environment\nApprove allows this exact command once, with unchanged input. No future permissions are granted.\nThe complete original request remains available in Technical details below.",
+            "questions": [
+              {
+                "id": "decision",
+                "prompt": "Choose what happens to this command",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "accept",
+                    "label": "Approve once",
+                    "detail": "Approve this action once."
+                  },
+                  {
+                    "id": "decline",
+                    "label": "Deny",
+                    "detail": "Deny this action; continue the turn."
+                  },
+                  {
+                    "id": "cancel",
+                    "label": "Cancel this turn",
+                    "detail": "Deny this action and interrupt the turn."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "63d829984bd2da4603ea40ca938842fa1da573ee76d7b8173d6785a5efbdf26d",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "decision": "accept"
+        },
+        "wire_answer": "accept"
+      },
+      {
+        "fenric_value": {
+          "decision": "decline"
+        },
+        "wire_answer": "decline"
+      },
+      {
+        "fenric_value": {
+          "decision": "cancel"
+        },
+        "wire_answer": "cancel"
+      }
+    ]
+  },
+  {
+    "evidence": "synthetic portable counterpart; no native invocation or delivery",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "codex-question-synthetic-projection",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "codex",
+          "route": "codex.question",
+          "method": "item/tool/requestUserInput",
+          "request_id": 17,
+          "thread_id": "synthetic-thread",
+          "turn_id": "synthetic-turn",
+          "item_id": "synthetic-question",
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": null,
+          "agent_id": null
+        },
+        "kind": "question",
+        "original": {
+          "questions": [
+            {
+              "id": "probe-choice",
+              "header": "Choice",
+              "question": "Choose one synthetic option",
+              "options": [
+                {
+                  "label": "A",
+                  "description": "First option description"
+                },
+                {
+                  "label": "B",
+                  "description": "Second option description"
+                }
+              ],
+              "isOther": false,
+              "isSecret": false
+            }
+          ],
+          "rpc": {
+            "jsonrpc": "2.0",
+            "id": 17,
+            "method": "item/tool/requestUserInput",
+            "params": {
+              "threadId": "synthetic-thread",
+              "turnId": "synthetic-turn",
+              "itemId": "synthetic-question",
+              "isBlocking": true,
+              "questions": [
+                {
+                  "id": "probe-choice",
+                  "header": "Choice",
+                  "question": "Choose one synthetic option",
+                  "options": [
+                    {
+                      "label": "A",
+                      "description": "First option description"
+                    },
+                    {
+                      "label": "B",
+                      "description": "Second option description"
+                    }
+                  ],
+                  "isOther": false,
+                  "isSecret": false
+                }
+              ]
+            }
+          }
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "probe-choice": {
+              "type": "string",
+              "enum": [
+                "A",
+                "B"
+              ]
+            }
+          },
+          "required": [
+            "probe-choice"
+          ],
+          "additionalProperties": false
+        },
+        "choices": [],
+        "scope": {
+          "category": "structured-answer",
+          "tool": "item/tool/requestUserInput"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.codex-question.v1",
+          "spec": {
+            "verb": "ask",
+            "questions": [
+              {
+                "id": "probe-choice",
+                "prompt": "Choose one synthetic option",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "A",
+                    "label": "A",
+                    "detail": "First option description"
+                  },
+                  {
+                    "id": "B",
+                    "label": "B",
+                    "detail": "Second option description"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "5a0b6626127a8540bd55918a2d225ead4dcb39efd6608de4b753c19e94f9d1c2",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "probe-choice": "B"
+        },
+        "wire_answer": {
+          "probe-choice": "B"
+        }
+      }
+    ]
+  },
+  {
+    "evidence": "Synthetic exact Codex 0.163 public callback subset; no native invocation or delivery; information-only rule/session alternatives, one-action-only response",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "codex-command-mixed-alternatives-synthetic-projection",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "codex",
+          "route": "codex.command",
+          "method": "item/commandExecution/requestApproval",
+          "request_id": "synthetic-rpc-command",
+          "thread_id": "synthetic-thread",
+          "turn_id": "synthetic-turn",
+          "item_id": "synthetic-command",
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": 1000,
+          "agent_id": null
+        },
+        "kind": "approval",
+        "original": {
+          "id": "synthetic-rpc-command",
+          "method": "item/commandExecution/requestApproval",
+          "params": {
+            "threadId": "synthetic-thread",
+            "turnId": "synthetic-turn",
+            "itemId": "synthetic-command",
+            "startedAtMs": 1000,
+            "approvalId": null,
+            "kind": "command",
+            "command": "/usr/bin/true",
+            "cwd": "/private/tmp",
+            "environmentId": "synthetic-environment",
+            "reason": "Disposable example only",
+            "commandActions": [
+              {
+                "type": "unknown",
+                "command": "/usr/bin/true"
+              }
+            ],
+            "networkApprovalContext": null,
+            "proposedExecpolicyAmendment": [
+              "/usr/bin/true"
+            ],
+            "proposedNetworkPolicyAmendments": null,
+            "additionalPermissions": null,
+            "availableDecisions": [
+              "cancel",
+              {
+                "acceptWithExecpolicyAmendment": {
+                  "execpolicy_amendment": [
+                    "/usr/bin/true"
+                  ]
+                }
+              },
+              "acceptForSession",
+              "accept"
+            ]
+          }
+        },
+        "response_schema": {
+          "type": "string",
+          "enum": [
+            "cancel",
+            "accept"
+          ]
+        },
+        "choices": [
+          "cancel",
+          "accept"
+        ],
+        "scope": {
+          "category": "one-call-tool",
+          "tool": "item/commandExecution/requestApproval"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.codex-command-approval.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending action",
+            "message": "Codex requests a decision for exactly one pending command.\nCommand (untrusted action text):\n/usr/bin/true\nWorking directory:\n/private/tmp\nReason supplied by Codex:\nDisposable example only\nExecution environment:\nsynthetic-environment\nApprove allows this exact command once, with unchanged input. No future permissions are granted.\nThe complete original request remains available in Technical details below.\nProposed rules and session-wide alternatives are information only; they cannot be selected here.",
+            "questions": [
+              {
+                "id": "decision",
+                "prompt": "Choose what happens to this command",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "cancel",
+                    "label": "Cancel this turn",
+                    "detail": "Deny this action and interrupt the turn."
+                  },
+                  {
+                    "id": "accept",
+                    "label": "Approve once",
+                    "detail": "Approve this action once."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "d3c5ef81980a4c004a772ffb76350705367535fbe1ea9d3544a3d2e376b200f8",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "decision": "accept"
+        },
+        "wire_answer": "accept"
+      },
+      {
+        "fenric_value": {
+          "decision": "cancel"
+        },
+        "wire_answer": "cancel"
+      }
+    ]
+  },
+  {
+    "evidence": "synthetic portable counterpart; no native invocation or delivery",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "codex-mcp-confirmation-once",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "codex",
+          "route": "codex.question",
+          "method": "item/tool/requestUserInput",
+          "request_id": 17,
+          "thread_id": "synthetic-thread",
+          "turn_id": "synthetic-turn",
+          "item_id": "mcp-item",
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": null,
+          "agent_id": null
+        },
+        "kind": "question",
+        "original": {
+          "rpc": {
+            "id": 17,
+            "method": "item/tool/requestUserInput",
+            "params": {
+              "threadId": "synthetic-thread",
+              "turnId": "synthetic-turn",
+              "itemId": "mcp-item",
+              "isBlocking": true,
+              "questions": [
+                {
+                  "id": "mcp_tool_call_approval_mcp-item",
+                  "header": "Approve app tool call?",
+                  "question": "Metadata-supplied display prose is not the action.",
+                  "options": [
+                    {
+                      "label": "Allow",
+                      "description": "Run the tool and continue."
+                    },
+                    {
+                      "label": "Cancel",
+                      "description": "Cancel this tool call."
+                    }
+                  ],
+                  "isOther": false,
+                  "isSecret": false
+                }
+              ]
+            }
+          },
+          "action": {
+            "type": "mcpToolCall",
+            "id": "mcp-item",
+            "server": "sample-server",
+            "tool": "sample-tool",
+            "arguments": {
+              "text": "<untrusted>",
+              "nested": [
+                null,
+                true,
+                7
+              ]
+            },
+            "status": "inProgress"
+          }
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "mcp_tool_call_approval_mcp-item": {
+              "type": "string",
+              "enum": [
+                "Allow",
+                "Cancel"
+              ]
+            }
+          },
+          "required": [
+            "mcp_tool_call_approval_mcp-item"
+          ],
+          "additionalProperties": false
+        },
+        "choices": [],
+        "scope": {
+          "category": "structured-answer",
+          "tool": "item/tool/requestUserInput"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.codex-mcp-confirmation.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending tool call",
+            "message": "Allow exactly this pending tool call with unchanged arguments, or cancel it. This grants no future permissions.\nUntrusted action data:\n{\"arguments\":{\"nested\":[null,true,7],\"text\":\"<untrusted>\"},\"server\":\"sample-server\",\"tool\":\"sample-tool\"}",
+            "questions": [
+              {
+                "id": "mcp_tool_call_approval_mcp-item",
+                "prompt": "Allow this exact tool call once, or cancel it?",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "Allow",
+                    "label": "Allow",
+                    "detail": "Run the tool and continue."
+                  },
+                  {
+                    "id": "Cancel",
+                    "label": "Cancel",
+                    "detail": "Cancel this tool call."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "3479346e1b9d7930fc65839b3e3a2d7f2676af5b6fccfea08b2174f86a3747a3",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "mcp_tool_call_approval_mcp-item": "Allow"
+        },
+        "wire_answer": {
+          "mcp_tool_call_approval_mcp-item": "Allow"
+        }
+      },
+      {
+        "fenric_value": {
+          "mcp_tool_call_approval_mcp-item": "Cancel"
+        },
+        "wire_answer": {
+          "mcp_tool_call_approval_mcp-item": "Cancel"
+        }
+      }
+    ]
+  },
+  {
+    "evidence": "synthetic portable counterpart; no native invocation or delivery",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "codex-mcp-confirmation-session",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "disposable",
+        "project": "sample",
+        "participant": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "session": "synthetic-session",
+        "native": {
+          "harness": "codex",
+          "route": "codex.question",
+          "method": "item/tool/requestUserInput",
+          "request_id": 17,
+          "thread_id": "synthetic-thread",
+          "turn_id": "synthetic-turn",
+          "item_id": "mcp-item",
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": null,
+          "agent_id": null
+        },
+        "kind": "question",
+        "original": {
+          "rpc": {
+            "id": 17,
+            "method": "item/tool/requestUserInput",
+            "params": {
+              "threadId": "synthetic-thread",
+              "turnId": "synthetic-turn",
+              "itemId": "mcp-item",
+              "isBlocking": true,
+              "questions": [
+                {
+                  "id": "mcp_tool_call_approval_mcp-item",
+                  "header": "Approve app tool call?",
+                  "question": "Metadata-supplied display prose is not the action.",
+                  "options": [
+                    {
+                      "label": "Allow",
+                      "description": "Run the tool and continue."
+                    },
+                    {
+                      "label": "Allow for this session",
+                      "description": "Run the tool and remember this choice for this session."
+                    },
+                    {
+                      "label": "Cancel",
+                      "description": "Cancel this tool call."
+                    }
+                  ],
+                  "isOther": false,
+                  "isSecret": false
+                }
+              ],
+              "autoResolutionMs": null
+            },
+            "trace": {
+              "traceparent": null,
+              "tracestate": "synthetic"
+            }
+          },
+          "action": {
+            "type": "mcpToolCall",
+            "id": "mcp-item",
+            "server": "sample-server",
+            "tool": "sample-tool",
+            "arguments": {
+              "text": "<untrusted>",
+              "nested": [
+                null,
+                true,
+                7
+              ]
+            },
+            "status": "inProgress",
+            "durationMs": null,
+            "error": null,
+            "result": null,
+            "pluginId": null,
+            "readOnlyHint": false,
+            "mcpAppResourceUri": "https://example.invalid/inert",
+            "mcpAppUi": {
+              "resourceUri": "ui://inert",
+              "preferredModelDisplayMode": "inline"
+            },
+            "appContext": {
+              "connectorId": "sample",
+              "actionName": null,
+              "appName": "Sample",
+              "linkId": null,
+              "resourceUri": null
+            }
+          }
+        },
+        "response_schema": {
+          "type": "object",
+          "properties": {
+            "mcp_tool_call_approval_mcp-item": {
+              "type": "string",
+              "enum": [
+                "Allow",
+                "Cancel"
+              ]
+            }
+          },
+          "required": [
+            "mcp_tool_call_approval_mcp-item"
+          ],
+          "additionalProperties": false
+        },
+        "choices": [],
+        "scope": {
+          "category": "structured-answer",
+          "tool": "item/tool/requestUserInput"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "presentation": {
+          "mapping": "fenric.codex-mcp-confirmation.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending tool call",
+            "message": "Allow exactly this pending tool call with unchanged arguments, or cancel it. This grants no future permissions.\nUntrusted action data:\n{\"arguments\":{\"nested\":[null,true,7],\"text\":\"<untrusted>\"},\"server\":\"sample-server\",\"tool\":\"sample-tool\"}\nThe session-wide alternative is retained in the original but cannot be selected here.",
+            "questions": [
+              {
+                "id": "mcp_tool_call_approval_mcp-item",
+                "prompt": "Allow this exact tool call once, or cancel it?",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "Allow",
+                    "label": "Allow",
+                    "detail": "Run the tool and continue."
+                  },
+                  {
+                    "id": "Cancel",
+                    "label": "Cancel",
+                    "detail": "Cancel this tool call."
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "501",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ]
+      },
+      "decision_digest": "bf5164cce67ddd515049ea2dda3395cd7989963a22e352d39b898d5c4e77e374",
+      "transport": {
+        "adapter_instance": "fixture-adapter",
+        "host_generation": "fixture-generation",
+        "renderer_instance": "fixture-renderer",
+        "channel_id": "fixture-admission"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "mcp_tool_call_approval_mcp-item": "Allow"
+        },
+        "wire_answer": {
+          "mcp_tool_call_approval_mcp-item": "Allow"
+        }
+      },
+      {
+        "fenric_value": {
+          "mcp_tool_call_approval_mcp-item": "Cancel"
+        },
+        "wire_answer": {
+          "mcp_tool_call_approval_mcp-item": "Cancel"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,46 @@
+{
+  "verb": "ask",
+  "app": "Coding agent",
+  "title": "Plan your project",
+  "presentation": "wizard",
+  "questions": [
+    {
+      "id": "target",
+      "prompt": "What are you building?",
+      "options": [
+        {
+          "id": "web",
+          "label": "Website",
+          "detail": "A browser experience"
+        },
+        {
+          "id": "cli",
+          "label": "Command-line tool"
+        }
+      ],
+      "other": true
+    },
+    {
+      "id": "audience",
+      "prompt": "Who will use the website?",
+      "when": {
+        "question": "target",
+        "equals": "web"
+      }
+    },
+    {
+      "id": "command",
+      "prompt": "What should the command do?",
+      "when": {
+        "question": "target",
+        "equals": "cli"
+      }
+    },
+    {
+      "id": "notes",
+      "prompt": "Anything else?",
+      "multiline": true,
+      "required": false
+    }
+  ]
+}

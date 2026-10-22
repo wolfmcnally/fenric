@@ -1,0 +1,7 @@
+{
+  "verb": "custom",
+  "app": "Coding agent",
+  "title": "Test run",
+  "html": "<h2>All 212 tests passed</h2><p>Slowest three:</p><table><tr><th>Test</th><th>Seconds</th></tr><tr><td>test_packaging</td><td>1.7</td></tr><tr><td>test_target</td><td>0.4</td></tr><tr><td>test_charts</td><td>0.2</td></tr></table>",
+  "height": 260
+}
