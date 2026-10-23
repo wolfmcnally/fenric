@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import tempfile
 import tomllib
 import venv
 import zipfile
@@ -48,7 +49,13 @@ VERSION = tomllib.loads((PROJECT / "pyproject.toml").read_text())["project"]["ve
 
 @pytest.fixture(scope="module")
 def archives(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
-    return package.build(tmp_path_factory.mktemp("dist"))
+    # Exercise the real build boundary even in a clean public checkout.
+    local = PROJECT / ".kickoff"
+    local.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="package-exclusion-", dir=local) as scratch:
+        marker = Path(scratch) / "synthetic-private-evidence.txt"
+        marker.write_text("Synthetic local evidence must never ship.\n", encoding="utf-8")
+        return package.build(tmp_path_factory.mktemp("dist"))
 
 
 def _wheel_files(wheel: Path) -> dict[str, bytes]:
@@ -71,8 +78,9 @@ def test_built_archives_match_the_inventory(archives: dict[str, Path]) -> None:
     assert package.differences(package.read_inventory(), found) == []
     assert "fenric/cli.py" in found["wheel"]
     assert not any(name.startswith(("preview/", "tests/", "docs/")) for name in found["wheel"])
-    ignored = ("gallery/", "dist/", "node_modules/")
+    ignored = (".kickoff/", "gallery/", "dist/", "node_modules/")
     assert not any(name.startswith(ignored) for name in found["sdist"])
+    assert not any(name.startswith(".kickoff/") for name in found["wheel"])
 
 
 def test_a_member_outside_the_archive_is_reported(tmp_path: Path) -> None:

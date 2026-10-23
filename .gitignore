@@ -24,3 +24,6 @@ htmlcov/
 node_modules/
 # Generated locally by the preview harness's gallery command; never committed.
 gallery/
+
+# Local agent review and execution evidence must never ship.
+/.kickoff/
