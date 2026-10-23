@@ -8,7 +8,7 @@ A spec is one JSON object: a `verb` and that verb's fields. It is what `--spec` 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `verb` | string, required | One of `notify`, `confirm`, `pick`, `ask`, `secret`, `form`, `custom`, `chart`. |
+| `verb` | string, required | One of `notify`, `confirm`, `pick`, `ask`, `secret`, `form`, `custom`, `chart`, `html`. |
 | `app` | string | Who is asking: the window title and the label above the dialog. Default `Fenric`. |
 | `timeout` | number | Seconds before an untouched dialog expires. Greater than 0, at most 3600. |
 
@@ -60,7 +60,6 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 ### confirm
@@ -86,7 +85,6 @@ The buttons default to **No** and **Yes**; pressing **Yes** prints:
 
 ```text
 true
-fenric: remote: unavailable: not configured
 ```
 
 ### pick
@@ -111,7 +109,6 @@ Ticking **Asia Pacific** and **Europe** prints their ids, in the options' order:
 
 ```text
 ["eu","ap"]
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": {"action": "ok", "values": {"choice": []}}} -->
@@ -119,7 +116,6 @@ Ticking nothing is an answer too:
 
 ```text
 []
-fenric: remote: unavailable: not configured
 ```
 
 ### ask
@@ -161,7 +157,6 @@ Typing two lines, leaving the optional severity unanswered, ticking **cli** and 
 
 ```text
 {"summary":"Login fails\nafter an update.","severity":null,"areas":["cli","the API"]}
-fenric: remote: unavailable: not configured
 ```
 
 For several substantial decisions, choose `"presentation":"wizard"` explicitly. Omitting the field keeps the all-at-once form, regardless of question count. This layout belongs to `ask`; catalog `form` components are not automatically converted. The final review may still be long and remains scrollable.
@@ -263,7 +258,6 @@ With `.env` holding a comment, a URL and an old key, filling both fields prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 and `.env` afterwards:
@@ -279,7 +273,6 @@ export DB_PASSWORD='p@ss word#1'
 A value that cannot be written on one line is refused after the person submits, and nothing is written:
 
 ```text
-fenric: remote: unavailable: not configured
 fenric: error: fields[0]: the value holds a line break or a NUL, which the target file cannot hold
 ```
 
@@ -302,7 +295,6 @@ With an existing key:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 `settings.json` afterwards:
@@ -319,7 +311,6 @@ Without one, the key is added after the last member:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 `settings.json` afterwards:
@@ -344,7 +335,6 @@ Fenric prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 `registry-token` afterwards:
@@ -366,7 +356,6 @@ A value holding a dollar and a single quote is single-quoted for the shell; Fenr
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 `.envrc` afterwards:
@@ -413,7 +402,6 @@ Leaving the select and the checkbox untouched and pressing OK prints `null` and 
 
 ```text
 {"team":null,"admin":false}
-fenric: remote: unavailable: not configured
 ```
 
 ### custom
@@ -425,6 +413,24 @@ fenric: remote: unavailable: not configured
 | `height` | integer | Frame height in pixels, 100 to 2000. Default 420. |
 
 Result: the status `ok`. What survives sanitizing is described in the [security model](security.md#generated-html).
+
+### html
+
+| Field | Type | Meaning |
+|---|---|---|
+| `title` | string | A heading outside the embedded content. |
+| `root` | string, required | Caller-selected directory; a relative root is resolved from the calling process's working directory. |
+| `entry` | string, required | Selected `.html` or `.htm` file to open, relative to `root`. |
+| `files` | array of strings, required | Exact allowlist, including `entry`; no directory expansion. |
+| `height` | integer | Requested frame height in pixels, 100 to 2000; default 420. Guides the initial desktop fit; the frame then follows the resized window. |
+
+Result: the status `ok`, meaning presentation acknowledged, never approval of an embedded action. Selected files are snapshotted before opening and served byte-for-byte, without rewriting or sanitizing their contents. Use `custom` for sanitized inert markup instead. Relative links, scripts, styles and fetches work only within the selected bundle; every navigable document retains the same opaque sandbox and source policy. Unselected links are refused, not silently copied. Inline script/style and selected scripts may render presentation content, but cannot access the parent, native Python bridge, arbitrary filesystem, external network, forms, popups, nested frames or workers. Browser storage and unsafe-eval are not enabled. Data/blob images and fonts are allowed.
+
+Limits: 4096 unique files, 16 MiB per file and 128 MiB total. Supported extensions are HTML/HTM, CSS, JS, JSON, SVG, PNG, JPG/JPEG, GIF, WebP, WOFF and WOFF2; textual files must be UTF-8. Paths are exact POSIX relative names: no absolute paths, empty/dot/dot-dot components, symlinks in the selected path, query/fragment names, backslashes, nonregular files or unsupported file types. A changing or unreadable selection is refused before any window. The caller must exclude secrets, raw transcripts and unrelated material; an extension is not a content audit.
+
+Frame activity does not report touch or extend the original deadline. Use an explicit `timeout` up to 3600 for a long review; default hard lifetime remains five minutes. Desktop uses a temporary assets-only loopback capability; phone delivery additionally uses the existing authenticated private surface. Both are owned and closed by the same invocation. There is no headless-only renderer or new remote configuration.
+
+Native HTML windows fit once using the requested frame height plus trusted chrome, bounded to the current display's usable area. They then permit resizing, with a 360 by 320 pixel outer-window user-resize minimum; a smaller display takes precedence over that minimum during fitting. The content frame adapts to the chosen viewport and scrolls internally, while trusted controls remain outside it and can be reached by outer scrolling when necessary. Later layout measurements never reset a person's chosen HTML window size. The configured remote page retains its requested frame height. Resizing is not an answer, touch or deadline extension.
 
 ### chart
 

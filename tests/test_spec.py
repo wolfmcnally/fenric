@@ -15,6 +15,7 @@ MINIMAL = {
     "form": {"components": [{"type": "field", "id": "f", "label": "l"}]},
     "custom": {"html": "<p>x</p>"},
     "chart": {"code": "d3.select(root);"},
+    "html": {"root": ".", "entry": "index.html", "files": ["index.html"]},
 }
 
 
@@ -25,7 +26,7 @@ def refusal(spec: object) -> SpecError:
 
 
 def test_every_verb_accepts_its_minimal_spec() -> None:
-    assert set(MINIMAL) == set(VERBS) and len(VERBS) == 8
+    assert set(MINIMAL) == set(VERBS) and len(VERBS) == 9
     for verb, fields in MINIMAL.items():
         spec = validate_spec({"verb": verb, **fields})
         assert spec.verb == verb

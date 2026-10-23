@@ -10,6 +10,7 @@ between an answer, a cancel, and "unavailable".
 from __future__ import annotations
 
 import os
+import secrets
 import shlex
 import socket
 import threading
@@ -18,12 +19,14 @@ from dataclasses import dataclass, replace
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 
 from fenric import backend as backends
 from fenric.charts import ChartError, compile_chart
 from fenric.chrome import build_page
+from fenric.html_bundle import HtmlError, load_bundle
 from fenric.protocol import ProtocolError
-from fenric.remote import Remote
+from fenric.remote import Remote, Transport
 from fenric.result import validate_result
 from fenric.session import Session
 from fenric.spec import Spec, SpecError, validate_spec
@@ -124,6 +127,11 @@ def run(
     try:
         request = validate_spec(spec)
         chart_script = compile_chart(request.fields["code"]) if request.verb == "chart" else None
+        bundle = (
+            load_bundle(request.fields["root"], request.fields["entry"], request.fields["files"])
+            if request.verb == "html"
+            else None
+        )
         prepared = prepare_destination(request)
         destination, names = prepared.metadata, prepared.names
         if _interaction is not None:
@@ -132,18 +140,22 @@ def run(
             _interaction.prepare(request, prepared)
     except SpecError as exc:
         return _error(f"{exc.path} {exc.problem}")
-    except (ChartError, TargetError, StoreError) as exc:
+    except (ChartError, TargetError, StoreError, HtmlError) as exc:
         return _error(str(exc))
     except ProtocolError:
         return _error("integrated interaction refused")
     shown = replace(request, timeout=_interaction.remaining_seconds) if _interaction else request
     context = _interaction.page_context if _interaction else None
+    file_token = secrets.token_urlsafe(32) if bundle else None
+    remote_file_token = secrets.token_urlsafe(32) if bundle else None
     page = build_page(
         shown,
         chart_script,
         destination=destination,
         interaction=context,
         review_only=_interaction.review_only if _interaction else False,
+        bundle=bundle,
+        file_token=file_token,
     )
     final: list[Result] = []
 
@@ -183,6 +195,9 @@ def run(
         destination=destination,
         remote=True,
         interaction=context,
+        bundle=bundle,
+        file_token=remote_file_token,
+        frame_url=f"/{remote_file_token}/files/{quote(bundle.entry)}" if bundle else None,
     )
     remote = Remote(
         remote_page,
@@ -206,8 +221,31 @@ def run(
             session.close()
             return _error("integrated interaction ended")
     session.start()
-    remote.start()
+    local_transport = None
+    remote_started = False
     try:
+        try:
+            if bundle:
+                local_transport = Transport(page, session, "", "", local=True)
+                page = build_page(
+                    shown,
+                    destination=destination,
+                    interaction=context,
+                    review_only=_interaction.review_only if _interaction else False,
+                    bundle=bundle,
+                    file_token=file_token,
+                    frame_url=local_transport.origin
+                    + local_transport.files_path
+                    + quote(bundle.entry),
+                )
+            remote.start()
+            remote_started = True
+        except Exception:
+            session.settle(
+                backends.Outcome(backends.UNAVAILABLE, reason="setup failed"),
+                systemic=True,
+            )
+            return _unavailable(request, "setup failed", fallback_file)
         try:
             outcome = (
                 session.outcome or backends.Outcome(backends.UNAVAILABLE)
@@ -233,7 +271,10 @@ def run(
             return _error(outcome.reason or "request could not be completed")
         return _unavailable(request, outcome.reason or "render failure", fallback_file)
     finally:
-        remote.close()
+        if remote_started:
+            remote.close()
+        if local_transport is not None:
+            local_transport.close()
         session.close()
 
 
@@ -324,6 +365,8 @@ def render_text(spec: Spec) -> str:
         lines.append(_plain_text(fields["html"]))
     elif spec.verb == "chart":
         lines.append("A chart was requested; it cannot be shown as text.")
+    elif spec.verb == "html":
+        lines.append("Selected HTML was requested; it cannot be shown as text.")
     rendered = "\n".join(lines) + "\n"
     if spec.verb == "notify" and "copy_text" in fields:
         rendered += "Text to copy:\n" + fields["copy_text"]

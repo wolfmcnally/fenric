@@ -17,7 +17,9 @@ from dataclasses import dataclass
 from html import escape
 from importlib import resources
 from typing import Any
+from urllib.parse import urlsplit
 
+from fenric.html_bundle import HtmlBundle
 from fenric.images import MAX_COMMENT_LENGTH
 from fenric.sanitize import sanitize_html
 from fenric.spec import Spec
@@ -52,9 +54,13 @@ class Page:
     html: str
     timeout: float | None
     width: int
+    bundle: HtmlBundle | None = None
+    file_token: str | None = None
 
 
-def outer_policy(script_hashes: list[str], *, remote: bool = False) -> str:
+def outer_policy(
+    script_hashes: list[str], *, remote: bool = False, frame_source: str = "'none'"
+) -> str:
     """Return the content policy for the trusted outer page.
 
     Non-chart pages use this restricted policy; chart pages emit no CSP.
@@ -66,7 +72,7 @@ def outer_policy(script_hashes: list[str], *, remote: bool = False) -> str:
     connection = "; connect-src 'self'" if remote else ""
     return (
         f"default-src 'none'; script-src {scripts}{bridge}; "
-        "style-src 'unsafe-inline'; img-src data:; frame-src 'none'" + connection
+        f"style-src 'unsafe-inline'; img-src data:; frame-src {frame_source}" + connection
     )
 
 
@@ -78,10 +84,13 @@ def build_page(
     remote: bool = False,
     interaction: dict[str, Any] | None = None,
     review_only: bool = False,
+    bundle: HtmlBundle | None = None,
+    file_token: str | None = None,
+    frame_url: str | None = None,
 ) -> Page:
     """Build the page for ``spec``. A chart needs its already compiled script."""
     fields = spec.fields
-    body, actions = _BUILDERS[spec.verb](spec, chart_script)
+    body, actions = _BUILDERS[spec.verb](spec, frame_url if spec.verb == "html" else chart_script)
     parts = ['<header class="asker">', f'<span class="app">{_e(spec.app)}</span>']
     if spec.timeout is not None:
         parts.append(
@@ -155,13 +164,25 @@ def build_page(
     hashes = [_script_hash(script)]
     if remote:
         hashes.append(_script_hash(remote_script))
-    policy = outer_policy(hashes, remote=remote)
+    source = "'none'"
+    if spec.verb == "html":
+        source = "'self'"
+        if not remote:
+            location = urlsplit(frame_url or "")
+            source = (
+                f"{location.scheme}://{location.netloc}/{file_token}/files/"
+                if location.scheme in ("http", "https") and file_token
+                else "'none'"
+            )
+    policy = outer_policy(hashes, remote=remote, frame_source=source)
     policy_meta = (
         ""
         if spec.verb == "chart"
         else (f'<meta http-equiv="Content-Security-Policy" content="{_e(policy)}">')
     )
     marker = ' data-remote="true"' if remote else ""
+    if spec.verb == "html" and not remote and not review_only:
+        marker += ' data-html="true"'
     if interaction is not None:
         marker += ' data-integrated="true"'
     if review_only:
@@ -176,7 +197,7 @@ def build_page(
         + (f"<script>{remote_script}</script>" if remote else "")
         + "</body></html>"
     )
-    wide = spec.verb in ("custom", "chart") or any(
+    wide = spec.verb in ("custom", "chart", "html") or any(
         "image" in question for question in fields.get("questions", [])
     )
     return Page(
@@ -184,6 +205,8 @@ def build_page(
         html=html,
         timeout=spec.timeout,
         width=_WIDE if wide else _NARROW,
+        bundle=bundle,
+        file_token=file_token,
     )
 
 
@@ -479,11 +502,12 @@ def _form(spec: Spec, chart_script: str | None) -> _Built:
     return _form_components(spec.fields["components"], [0]), _CANCEL_OK
 
 
-def _frame(document: str, sandbox: str, height: int, frame_id: str) -> str:
+def _frame(document: str, sandbox: str, height: int, frame_id: str, *, url: bool = False) -> str:
+    source = "src" if url else "srcdoc"
     return (
         f'<div class="generated"><span class="badge">{GENERATED_BADGE}</span>'
         f'<iframe id="{frame_id}" sandbox="{sandbox}" height="{height}" '
-        f'srcdoc="{_e(document)}"></iframe></div>'
+        f'{source}="{_e(document)}"></iframe></div>'
     )
 
 
@@ -530,6 +554,12 @@ def _chart(spec: Spec, chart_script: str | None) -> _Built:
     return _frame(document, "allow-scripts", spec.fields["height"], "fenric-chart"), _OK
 
 
+def _html(spec: Spec, frame_url: str | None) -> _Built:
+    return _frame(
+        frame_url or "about:blank", "allow-scripts", spec.fields["height"], "fenric-html", url=True
+    ), _OK
+
+
 _BUILDERS = {
     "notify": _notify,
     "confirm": _confirm,
@@ -539,4 +569,5 @@ _BUILDERS = {
     "form": _form,
     "custom": _custom,
     "chart": _chart,
+    "html": _html,
 }

@@ -44,6 +44,7 @@ _SCALAR_OPTIONS = {
     "form": ("title",),
     "custom": ("title", "html", "height"),
     "chart": ("title", "height"),
+    "html": ("title", "height", "root", "entry"),
 }
 _HELP = {
     "notify": "Show a message. Prints ok.",
@@ -59,6 +60,7 @@ _HELP = {
     "form": "Show a form from the component catalog. Prints an object keyed by input id.",
     "custom": "Show sanitized HTML in an inert frame. Prints ok.",
     "chart": "Show a d3 chart written in TypeScript. Prints ok.",
+    "html": "Show unchanged explicitly selected HTML and supporting files. Prints ok.",
 }
 
 
@@ -155,6 +157,12 @@ def build_parser() -> argparse.ArgumentParser:
     chart = verb("chart")
     text(chart, "--title", "--code-file", "--data-file")
     chart.add_argument("--height", type=int, default=absent)
+    html = verb("html")
+    text(html, "--title", "--root", "--entry")
+    html.add_argument(
+        "--file", action="append", default=absent, help="selected relative file; repeat"
+    )
+    html.add_argument("--height", type=int, default=absent)
     integrated = verbs.add_parser(
         "interact",
         allow_abbrev=False,
@@ -342,6 +350,8 @@ def _assemble(options: dict[str, Any]) -> dict[str, Any]:
             raise _Refusal("the copy file could not be read") from exc
     if "option" in options:
         spec["options"] = list(options["option"])
+    if "file" in options:
+        spec["files"] = list(options["file"])
     if "multiple" in options:
         spec["multiple"] = True
     if "question" in options:

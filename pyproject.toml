@@ -1,6 +1,6 @@
 [project]
 name = "fenric"
-version = "0.1.0"
+version = "0.2.0"
 description = "Native dialogs for agents and scripts: ask a person something, get a structured answer back."
 requires-python = ">=3.11"
 license = "MIT AND ISC AND BSD-3-Clause AND Unlicense"

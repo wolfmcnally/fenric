@@ -21,9 +21,11 @@ import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 from fenric import backend
 from fenric.chrome import Page
+from fenric.html_bundle import document_policy, valid_member_name
 from fenric.serve_guard import stop_group
 from fenric.session import Session
 
@@ -189,12 +191,16 @@ class _Server(http.server.ThreadingHTTPServer):
 class Transport:
     """An authenticated loopback endpoint; it never returns submitted values."""
 
-    def __init__(self, page: Page, session: Session, authority: str, login: str) -> None:
+    def __init__(
+        self, page: Page, session: Session, authority: str, login: str, *, local: bool = False
+    ) -> None:
         self.session = session
         self.token = secrets.token_urlsafe(32)
         self.path = "/" + self.token
         self.authority = authority
         self.origin = "https://" + authority
+        self.local = local
+        self.files_path = "/" + page.file_token + "/files/" if page.file_token else None
         owner = self
 
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -213,7 +219,14 @@ class Transport:
             ) -> None:
                 self.reply(400, b'{"error":"refused"}')
 
-            def reply(self, code: int, data: bytes, content: str = "application/json") -> None:
+            def reply(
+                self,
+                code: int,
+                data: bytes,
+                content: str = "application/json",
+                *,
+                resource: bool = False,
+            ) -> None:
                 self.send_response(code)
                 self.send_header("Content-Type", content)
                 self.send_header("Content-Length", str(len(data)))
@@ -221,11 +234,30 @@ class Transport:
                 self.send_header("Referrer-Policy", "no-referrer")
                 self.send_header("X-Content-Type-Options", "nosniff")
                 self.send_header("Connection", "close")
+                if resource:
+                    self.send_header(
+                        "Content-Security-Policy", document_policy(owner.origin + owner.files_path)
+                    )
+                    self.send_header("Access-Control-Allow-Origin", "null")
                 self.end_headers()
-                self.wfile.write(data)
+                if resource:
+                    for offset in range(0, len(data), 65536):
+                        if owner.session.done.is_set() or owner.session.authority_expired():
+                            break
+                        self.wfile.write(data[offset : offset + 65536])
+                else:
+                    self.wfile.write(data)
                 self.close_connection = True
 
             def allowed(self, post: bool = False) -> bool:
+                if owner.local:
+                    return (
+                        not post
+                        and len(self.requestline) <= 2048
+                        and sum(len(k) + len(v) for k, v in self.headers.items()) <= 8192
+                        and self.headers.get_all("Host") == [owner.authority]
+                        and not self.headers.get_all("Transfer-Encoding")
+                    )
                 expected = {
                     "Host": authority,
                     "X-Forwarded-Host": authority,
@@ -261,6 +293,23 @@ class Transport:
 
             def do_GET(self) -> None:
                 if not self.allowed():
+                    self.refuse()
+                elif owner.files_path and urlsplit(self.path).path.startswith(owner.files_path):
+                    try:
+                        name = unquote(
+                            urlsplit(self.path).path[len(owner.files_path) :], errors="strict"
+                        )
+                        if (
+                            not valid_member_name(name)
+                            or owner.session.done.is_set()
+                            or owner.session.authority_expired()
+                        ):
+                            raise ValueError
+                        resource = page.bundle.resources[name]
+                        self.reply(200, resource.data, resource.content_type, resource=True)
+                    except (KeyError, ValueError, UnicodeError):
+                        self.refuse()
+                elif owner.local:
                     self.refuse()
                 elif self.path == owner.path:
                     if owner.session.done.is_set():
@@ -322,6 +371,9 @@ class Transport:
                 self.state_reply()
 
         self.server = _Server(("127.0.0.1", 0), Handler)
+        if local:
+            self.authority = f"127.0.0.1:{self.server.server_port}"
+            self.origin = "http://" + self.authority
         self.thread = threading.Thread(
             target=lambda: self.server.serve_forever(poll_interval=0.05), daemon=True
         )

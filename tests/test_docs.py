@@ -8,7 +8,8 @@ markers, HTML comments that render as nothing:
 
 Each marker says how to reproduce what the documentation shows next: the
 first fence after it is exactly what the command prints (standard output, then
-standard error), and with ``file`` the second fence is that file's content
+standard error, omitting only the optional remote-not-configured status), and
+with ``file`` the second fence is that file's content
 afterwards. ``answer`` is what the window hands back (the page's payload), or
 ``"cancel"``, ``"expire"`` or ``"headless"``; without it no window may open.
 ``setup`` writes files before the run. A file without a final newline is shown
@@ -33,6 +34,7 @@ import os
 import re
 import shlex
 import shutil
+import sys
 import tempfile
 import tomllib
 from dataclasses import dataclass, field
@@ -184,7 +186,15 @@ def run_capture(
     if "file" in capture.spec:
         target = workspace / capture.spec["file"]
         written = target.read_text() if target.exists() else "(no file)\n"
-    return status, printed.out + printed.err, written
+    # These examples show the command result, not the fixture host's optional
+    # phone setup. Keep all other stderr, including actual command errors, and
+    # never strip a matching line from stdout (it could be caller content).
+    stderr = "".join(
+        line
+        for line in printed.err.splitlines(keepends=True)
+        if line != "fenric: remote: unavailable: not configured\n"
+    )
+    return status, printed.out + stderr, written
 
 
 @pytest.fixture
@@ -201,6 +211,26 @@ def test_every_documented_command_runs_as_written(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    # The capture policy must not hide command failures or caller content.
+    # Exercise the actual capture boundary, then restore the real CLI for all
+    # documented commands below.
+    def streams(_args: list[str]) -> int:
+        print("fenric: remote: unavailable: not configured")
+        print("fenric: remote: unavailable: not configured", file=sys.stderr)
+        print("fenric: error: invalid request", file=sys.stderr)
+        print("fenric: remote: unavailable: configuration error", file=sys.stderr)
+        return 3
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(sys.modules[__name__], "main", streams)
+        result = run_capture(Capture({}, 0, "fenric notify"), tmp_path, scoped, capsys)
+    assert result == (
+        3,
+        "fenric: remote: unavailable: not configured\n"
+        "fenric: error: invalid request\n"
+        "fenric: remote: unavailable: configuration error\n",
+        None,
+    )
     updating = os.environ.get("FENRIC_UPDATE_DOCS") == "1"
     mismatches, seen = [], 0
     for doc in DOCUMENTS:

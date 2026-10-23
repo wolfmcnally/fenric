@@ -8,16 +8,19 @@ the object the native backend reads.
 
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from playwright.sync_api import APIResponse, Browser, BrowserContext, Error, Page, Playwright, Route
 
 from fenric.charts import ChartError, compile_chart
 from fenric.chrome import build_page
 from fenric.engine import prepare_destination
+from fenric.html_bundle import load_bundle
 from fenric.remote import Transport
+from fenric.session import Session
 from fenric.spec import Spec, validate_spec
 
 INSTALL_HINT = (
@@ -40,6 +43,8 @@ class Dialog:
     page: Page
     context: BrowserContext
     errors: list[str]
+    transport: Transport | None = None
+    session: Session | None = None
 
     def state(self) -> dict[str, Any]:
         return self.page.evaluate("JSON.parse(JSON.stringify(window.fenric))")
@@ -59,7 +64,15 @@ class Dialog:
         self.page.set_viewport_size({"width": self.page.viewport_size["width"], "height": height})
 
     def close(self) -> None:
-        self.context.close()
+        try:
+            self.context.close()
+        finally:
+            try:
+                if self.transport:
+                    self.transport.close()
+            finally:
+                if self.session:
+                    self.session.close()
 
 
 def launch(playwright: Playwright) -> Browser:
@@ -80,22 +93,59 @@ def open_dialog(browser: Browser, raw: dict[str, Any], *, scheme: str = "light")
             chart_script = compile_chart(spec.fields["code"])
         except ChartError as exc:
             raise HarnessError(f"{CHART_HINT} ({exc})") from None
-    built = build_page(spec, chart_script, destination=prepare_destination(spec).metadata)
-    context = browser.new_context(
-        viewport={"width": built.width, "height": 800},
-        color_scheme=scheme,
-        device_scale_factor=SCALE,
-    )
-    page = context.new_page()
-    errors: list[str] = []
-    page.on("pageerror", lambda error: errors.append(str(error)))
-    page.on(
-        "console", lambda message: errors.append(message.text) if message.type == "error" else None
-    )
-    page.clock.install(time=0)
-    page.clock.pause_at(0)
-    page.set_content(built.html)
-    return Dialog(spec=spec, page=page, context=context, errors=errors)
+    transport = None
+    session = None
+    context = None
+    try:
+        if spec.verb == "html":
+            bundle = load_bundle(spec.fields["root"], spec.fields["entry"], spec.fields["files"])
+            token = secrets.token_urlsafe(32)
+            session = Session(spec.timeout, lambda p: None, lambda v: "ok")
+            stub = build_page(spec, bundle=bundle, file_token=token)
+            transport = Transport(stub, session, "", "", local=True)
+            built = build_page(
+                spec,
+                bundle=bundle,
+                file_token=token,
+                frame_url=transport.origin + transport.files_path + quote(bundle.entry),
+            )
+        else:
+            built = build_page(spec, chart_script, destination=prepare_destination(spec).metadata)
+        context = browser.new_context(
+            viewport={"width": built.width, "height": 800},
+            color_scheme=scheme,
+            device_scale_factor=SCALE,
+        )
+        page = context.new_page()
+        errors: list[str] = []
+        page.on("pageerror", lambda error: errors.append(str(error)))
+        page.on(
+            "console",
+            lambda message: errors.append(message.text) if message.type == "error" else None,
+        )
+        page.clock.install(time=0)
+        page.clock.pause_at(0)
+        page.set_content(built.html)
+        return Dialog(
+            spec=spec,
+            page=page,
+            context=context,
+            errors=errors,
+            transport=transport,
+            session=session,
+        )
+    except BaseException:
+        try:
+            if context:
+                context.close()
+        finally:
+            try:
+                if transport:
+                    transport.close()
+            finally:
+                if session:
+                    session.close()
+        raise
 
 
 def proxy_dialog(route: Route, transport: Transport) -> APIResponse:

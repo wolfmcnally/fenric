@@ -46,7 +46,7 @@ def validate_result(spec: Spec, payload: object) -> Any:
         return action == "yes"
     if action != "ok":
         raise ResultError("result.action", "is not an answer to this dialog")
-    if verb in ("notify", "custom", "chart"):
+    if verb in ("notify", "custom", "chart", "html"):
         _keys(values, set())
         return None
     if verb == "pick":

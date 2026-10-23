@@ -34,7 +34,6 @@ Pressing **Deploy** prints:
 
 ```text
 true
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": {"action": "no", "values": {}}} -->
@@ -42,7 +41,6 @@ Pressing **Not now** is an answer too, and also exits 0:
 
 ```text
 false
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": "expire", "exit": 4} -->
@@ -50,7 +48,6 @@ Left untouched, the ring drains and Fenric exits 4, so the script can fall back 
 
 ```text
 unavailable: timed out
-fenric: remote: unavailable: not configured
 ```
 
 ## Pick one option
@@ -82,7 +79,6 @@ Choosing **Production** and pressing OK prints the option's id, not its label:
 
 ```text
 "prod"
-fenric: remote: unavailable: not configured
 ```
 
 ## Ask several questions
@@ -121,7 +117,6 @@ Typing `orchard` as the name, choosing "Something else" and typing `MPL-2.0`, ti
 
 ```text
 {"name":"orchard","license":"MPL-2.0","extras":["tests","ci"]}
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": {"action": "ok", "values": {"q0": "orchard", "q1": 2, "q1.other": "", "q2": []}}} -->
@@ -129,7 +124,6 @@ Choosing **No license** and ticking nothing gives the option's id and an empty l
 
 ```text
 {"name":"orchard","license":"none","extras":[]}
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": "cancel", "exit": 2} -->
@@ -137,7 +131,6 @@ Pressing Escape, or **Cancel**, prints:
 
 ```text
 cancelled
-fenric: remote: unavailable: not configured
 ```
 
 ## Write a secret into a file
@@ -167,7 +160,6 @@ Pasting a key and pressing OK prints only a status:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 and `.env` now holds the key:
@@ -181,7 +173,6 @@ Run again where `.env` already has the key, only its value changes:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 `.env` afterwards:
@@ -229,7 +220,6 @@ Typing `Faster startup` as the summary, choosing **minor**, leaving the checkbox
 
 ```text
 {"summary":"Faster startup","kind":"minor","announce":true,"notes":""}
-fenric: remote: unavailable: not configured
 ```
 
 ## Show a report
@@ -259,7 +249,6 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 ## Draw a chart
@@ -281,7 +270,6 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 ## Ask one question at a time
@@ -352,7 +340,6 @@ Choosing **Website**, answering the audience question and leaving the optional n
 
 ```text
 {"target":"web","audience":"New contributors","notes":""}
-fenric: remote: unavailable: not configured
 ```
 
 ## Comment on screenshots
@@ -394,7 +381,6 @@ Commenting on Mobile layout and leaving Wide layout blank prints:
 
 ```text
 {"mobile":"Enlarge the primary button.","wide":""}
-fenric: remote: unavailable: not configured
 ```
 
 On a machine with remote already configured, the same gallery is available through the temporary authenticated phone URL. The requesting agent reads stdout once and matches each key to the manifest; comments do not authorize another operation. Reload, browser eviction, Cancel and expiry do not save partial comments. A native render failure ends the shared session, and `FENRIC_HEADLESS=1` refuses before either surface starts, so a remote deployment must meet the existing [installation](../README.md#install) and [remote prerequisites](commands.md#remote-access). This example neither enables remote nor changes access.

@@ -15,9 +15,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from fenric.html_bundle import MAX_FILES, is_html_entry, valid_member_name
 from fenric.images import MAX_IMAGES, MAX_TOTAL_IMAGE_BYTES, validate_image
 
-VERBS = ("notify", "confirm", "pick", "ask", "secret", "form", "custom", "chart")
+VERBS = ("notify", "confirm", "pick", "ask", "secret", "form", "custom", "chart", "html")
 FORM_CATALOG_VERSION = 1
 DEFAULT_APP = "Fenric"
 MAX_TIMEOUT_SECONDS = 3600
@@ -36,6 +37,7 @@ VERB_FIELDS: dict[str, frozenset[str]] = {
     "form": frozenset({"title", "catalog", "components"}),
     "custom": frozenset({"title", "html", "height"}),
     "chart": frozenset({"title", "code", "data", "height"}),
+    "html": frozenset({"title", "root", "entry", "files", "height"}),
 }
 _SECRET_NAME = re.compile(r"[A-Za-z0-9._-]+\Z")
 _QUESTION_KINDS = ("text", "choice", "multi")
@@ -494,6 +496,28 @@ def _chart(spec: Mapping[str, Any]) -> tuple[dict[str, Any], None]:
     }, None
 
 
+def _html(spec: Mapping[str, Any]) -> tuple[dict[str, Any], None]:
+    _only(spec, _COMMON_FIELDS | VERB_FIELDS["html"], "spec")
+    root = _text(spec, "root", "root", required=True)
+    entry = _text(spec, "entry", "entry", required=True)
+    files = _items(spec, "files", "files")
+    if len(files) > MAX_FILES or not all(valid_member_name(item) for item in files):
+        raise SpecError("files", "must be a bounded list of relative presentation files")
+    if len(set(files)) != len(files) or entry not in files:
+        raise SpecError("files", "must be unique and include the entry")
+    if "\0" in root:
+        raise SpecError("root", "must not contain NUL")
+    if not is_html_entry(entry):
+        raise SpecError("entry", "must select an HTML file")
+    return {
+        "title": _text(spec, "title", "title"),
+        "root": root,
+        "entry": entry,
+        "files": list(files),
+        "height": _height(spec),
+    }, None
+
+
 _VERB_VALIDATORS: dict[str, Callable[[Mapping[str, Any]], tuple[dict[str, Any], str | None]]] = {
     "notify": _notify,
     "confirm": _confirm,
@@ -503,4 +527,5 @@ _VERB_VALIDATORS: dict[str, Callable[[Mapping[str, Any]], tuple[dict[str, Any], 
     "form": _form,
     "custom": _custom,
     "chart": _chart,
+    "html": _html,
 }

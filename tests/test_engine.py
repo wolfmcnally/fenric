@@ -23,7 +23,7 @@ from .support import (
 CONFIRM = {"verb": "confirm", "message": "Proceed?"}
 
 
-def test_outcomes_map_to_the_contracts_exit_codes() -> None:
+def test_outcomes_map_to_the_contracts_exit_codes(tmp_path: Path, monkeypatch) -> None:
     answered = run(CONFIRM, backend=submits("yes"))
     assert (answered.status, answered.exit_code, answered.value) == ("ok", 0, True)
     cancelled = run(CONFIRM, backend=cancels())
@@ -32,6 +32,79 @@ def test_outcomes_map_to_the_contracts_exit_codes() -> None:
     assert (expired.status, expired.exit_code, expired.detail) == ("unavailable", 4, "timed out")
     absent = run(CONFIRM, backend=unavailable("no display"))
     assert (absent.status, absent.exit_code, absent.detail) == ("unavailable", 4, "no display")
+    import re
+    import urllib.error
+    import urllib.request
+    from html import unescape
+    from urllib.parse import urlsplit
+
+    from fenric.backend import CANCELLED, EXPIRED, SUBMITTED, UNAVAILABLE, Outcome
+
+    original = b"<!doctype html><h1>Unchanged report</h1>"
+    (tmp_path / "index.html").write_bytes(original)
+    spec = {"verb": "html", "root": str(tmp_path), "entry": "index.html", "files": ["index.html"]}
+    for outcome, expected in [
+        (Outcome(SUBMITTED, {"action": "ok", "values": {}}), 0),
+        (Outcome(CANCELLED), 2),
+        (Outcome(EXPIRED), 4),
+        (RuntimeError("SENTINEL"), 4),
+        (Outcome(UNAVAILABLE), 4),
+    ]:
+        urls = []
+
+        class Inspect:
+            def show(self, page, session):
+                url = re.search(r'id="fenric-html"[^>]*src="([^"]+)"', page.html)[1]
+                urls.append(url)
+                parsed = urlsplit(url)
+                prefix = (
+                    parsed.scheme
+                    + "://"
+                    + parsed.netloc
+                    + parsed.path.split("/files/")[0]
+                    + "/files/"
+                )
+                csp = unescape(
+                    re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', page.html)[
+                        1
+                    ]
+                )
+                frames = [
+                    part.strip() for part in csp.split(";") if part.strip().startswith("frame-src")
+                ]
+                assert frames == ["frame-src " + prefix]
+                assert urllib.request.urlopen(url).read() == original
+                if isinstance(outcome, Exception):
+                    raise outcome
+                return outcome
+
+        assert run(spec, backend=Inspect()).exit_code == expected
+        with pytest.raises(urllib.error.URLError):
+            urllib.request.urlopen(urls[0], timeout=0.2)
+
+    # Failure after the desktop assets listener binds still closes that listener.
+    from fenric import engine
+
+    actual_transport = engine.Transport
+    bound = []
+
+    def observed_transport(*args, **kwargs):
+        listener = actual_transport(*args, **kwargs)
+        bound.append(listener.origin + listener.files_path + "index.html")
+        return listener
+
+    def failed_start(self):
+        raise OSError("SENTINEL")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(engine, "Transport", observed_transport)
+        patch.setattr(engine.Remote, "start", failed_start)
+        renderer = submits("ok")
+        result = run(spec, backend=renderer)
+        assert result.exit_code == 4 and "SENTINEL" not in result.detail
+        assert renderer.pages == [] and len(bound) == 1
+        with pytest.raises(urllib.error.URLError):
+            urllib.request.urlopen(bound[0], timeout=0.2)
 
 
 def test_the_library_entry_point_is_the_same_engine() -> None:
@@ -45,12 +118,51 @@ def test_the_library_entry_point_is_the_same_engine() -> None:
     assert len(backend.pages) == 1 and backend.pages[0].title == "Library"
 
 
-def test_an_invalid_spec_is_exit_3_before_any_window() -> None:
+def test_an_invalid_spec_is_exit_3_before_any_window(tmp_path: Path, monkeypatch) -> None:
     backend = submits("yes")
     result = run({"verb": "confirm", "message": "m", "timeout": -1}, backend=backend)
     assert (result.status, result.exit_code) == ("error", 3)
     assert result.detail == "timeout must be greater than 0 and at most 3600 seconds"
     assert backend.pages == []
+    import os
+    import time
+
+    from fenric import html_bundle
+
+    (tmp_path / "index.html").write_text("<h1>Report</h1>")
+    (tmp_path / "outside.html").write_text("SENTINEL")
+    (tmp_path / "link.html").symlink_to(tmp_path / "outside.html")
+    (tmp_path / "directory").symlink_to(tmp_path, target_is_directory=True)
+    os.mkfifo(tmp_path / "pipe.html")
+    (tmp_path / "bad.html").write_bytes(b"\xff")
+    spec = {"verb": "html", "root": str(tmp_path), "entry": "index.html", "files": ["index.html"]}
+    started = time.monotonic()
+    for name in [
+        "../outside.html",
+        "/outside.html",
+        "link.html",
+        "directory/outside.html",
+        "pipe.html",
+        "bad.html",
+        "missing.html",
+        "command.py",
+        "./index.html",
+    ]:
+        result = run({**spec, "files": ["index.html", name]}, backend=backend)
+        assert result.exit_code == 3 and "SENTINEL" not in result.detail
+        assert name not in result.detail and str(tmp_path) not in result.detail
+    (tmp_path / "loop").symlink_to("loop")
+    loop = run({**spec, "root": str(tmp_path / "loop")}, backend=backend)
+    assert loop.exit_code == 3 and str(tmp_path) not in loop.detail
+    nul = run({**spec, "root": "bad\0root"}, backend=backend)
+    assert nul.exit_code == 3 and nul.detail.startswith("root ")
+    assert time.monotonic() - started < 1 and backend.pages == []
+    with monkeypatch.context() as patch:
+        patch.setattr(html_bundle, "MAX_FILE_BYTES", 4)
+        assert run(spec, backend=backend).exit_code == 3
+    with monkeypatch.context() as patch:
+        patch.setattr(html_bundle, "MAX_TOTAL_BYTES", 4)
+        assert run(spec, backend=backend).exit_code == 3
 
 
 def test_a_malformed_result_is_exit_3() -> None:
@@ -62,6 +174,7 @@ def test_a_malformed_result_is_exit_3() -> None:
 
 def test_headless_is_unavailable_without_asking_the_backend(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     monkeypatch.setenv("FENRIC_HEADLESS", "1")
     backend = submits("yes")
@@ -70,6 +183,14 @@ def test_headless_is_unavailable_without_asking_the_backend(
     assert backend.pages == []
     invalid = run({"verb": "confirm"}, backend=backend)
     assert (invalid.exit_code, invalid.detail) == (3, "message is required")
+    (tmp_path / "index.html").write_text("Report")
+
+    def no_transport(*args, **kwargs):
+        raise AssertionError("headless must not bind")
+
+    monkeypatch.setattr("fenric.engine.Transport", no_transport)
+    html = {"verb": "html", "root": str(tmp_path), "entry": "index.html", "files": ["index.html"]}
+    assert run(html, backend=backend).detail == "headless"
 
 
 def test_the_fallback_file_holds_a_plain_text_rendering(tmp_path: Path) -> None:

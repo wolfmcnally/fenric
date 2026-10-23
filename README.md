@@ -25,7 +25,7 @@ uv tool install .
 or from a built wheel:
 
 ```bash
-uv tool install fenric-0.1.0-py3-none-any.whl
+uv tool install fenric-0.2.0-py3-none-any.whl
 ```
 
 or with [pipx](https://pipx.pypa.io/):
@@ -39,6 +39,8 @@ Then `fenric --help` runs from any directory.
 Complete the [standard agent-guidance setup](docs/setup.md) on each host: preview the exact shared-instruction diff with `fenric guidance preview --plan guidance-review.json`, review it, apply that unchanged plan with `fenric guidance apply --plan guidance-review.json --backup-dir guidance-backup`, and run `fenric guidance check`. This installs the all-response preference and authenticated-response limits only into existing explicitly reviewed instruction targets. It preserves user edits/symlinks and reports each harness's read path separately; missing paths need separate configuration. Guidance presence does not prove native approval authority. No hooks, permissions, authentication or network setup is implied.
 
 ## Use
+
+The examples below show command results; the optional `fenric: remote: unavailable: not configured` stderr status is omitted. Fenric still prints that diagnostic when the phone surface has not been configured; it does not change the command's answer or exit status.
 
 New macOS dialogs appear without taking keyboard focus from the active application. Click or tap inside the dialog's content, or select the window and press Tab, before using Space or Enter to respond; opening or refocusing alone never arms those response keys. See [focus and keyboard responses](docs/commands.md#focus-and-deliberate-keyboard-responses). Native focus behavior on other platforms remains unverified, and these controls do not replace native permission or authentication requirements.
 
@@ -55,7 +57,6 @@ Pressing **Yes** prints:
 
 ```text
 true
-fenric: remote: unavailable: not configured
 ```
 
 Offer a choice:
@@ -71,7 +72,6 @@ Choosing **staging** and pressing OK prints:
 
 ```text
 "staging"
-fenric: remote: unavailable: not configured
 ```
 
 Collect a secret straight into a file, so it never passes through the program that asked:
@@ -87,7 +87,6 @@ Fenric prints only a status:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 and `.env`, created readable by its owner only, holds the key:
@@ -103,7 +102,7 @@ API_KEY=made-up-key
 | 3 | The request was invalid or could not be carried out; standard error says why, without quoting any value. |
 | 4 | No window was available, or it timed out untouched; standard output holds `unavailable: <reason>`. |
 
-The verbs are `notify`, `confirm`, `pick`, `ask`, `secret`, `form`, `custom` and `chart`. From Python:
+The verbs are `notify`, `confirm`, `pick`, `ask`, `secret`, `form`, `custom`, `chart` and `html`. From Python:
 
 ```python
 from fenric import run
@@ -132,6 +131,8 @@ Fenric reports one early URL or fixed unavailable reason on stderr. Use `--remot
 - [Standard setup](docs/setup.md): reviewed shared agent guidance, per-harness read paths, backup/recovery and native qualification limits.
 - [Spec reference](docs/spec.md): every field, every result, and the form component catalog.
 - [Security model](docs/security.md): what Fenric trusts, inert HTML, ordinary generated charts and direct credential custody.
+
+The `html` verb embeds unchanged caller-selected HTML and explicitly selected supporting files in a bounded opaque frame, preserving relative navigation. It snapshots an allowlist, not a directory tree; unselected files and outside network access are refused. See [selected HTML](docs/spec.md#html).
 
 Charts need [Bun](https://bun.sh) and a one-time `fenric setup-charts`; see the command reference.
 

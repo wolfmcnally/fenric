@@ -341,7 +341,17 @@ function fitTextareas(): void {
 
 function measure(): void {
   fitTextareas();
-  state.height = Math.ceil(document.documentElement.getBoundingClientRect().height);
+  const frame = document.body.hasAttribute("data-html")
+    ? document.querySelector<HTMLIFrameElement>("#fenric-html") : null;
+  if (frame) {
+    // Fit once from natural chrome plus requested frame height, independently
+    // of the viewport-filling layout. Later native sizing belongs to the person.
+    const main = document.querySelector("main")!;
+    state.height = Math.ceil(Math.max(main.scrollHeight, main.getBoundingClientRect().height)
+      - frame.getBoundingClientRect().height + Number(frame.getAttribute("height")));
+  } else {
+    state.height = Math.ceil(document.documentElement.getBoundingClientRect().height);
+  }
 }
 
 let ringDeadline: number | null = null;

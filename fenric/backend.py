@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 HARD_LIMIT_SECONDS = 300.0
 SAFETY_NET_SECONDS = 12.0
 _MIN_HEIGHT, _MAX_HEIGHT, _INITIAL_HEIGHT = 120, 900, 260
+_HTML_MIN_SIZE = (360, 320)
 _TITLE_BAR_ALLOWANCE = 30
 POLL_SECONDS = 0.1
 _STATE_SCRIPT = "window.fenric"
@@ -212,9 +213,15 @@ class _Session:
         if state.get("touched") is True:
             self._session.touch()
         height = state.get("height")
-        if isinstance(height, int) and not isinstance(height, bool) and height != self._height:
+        if (
+            isinstance(height, int)
+            and not isinstance(height, bool)
+            and height != self._height
+            and (self._page.bundle is None or (height > 0 and self._height == 0))
+        ):
             self._height = height
-            wanted = min(_MAX_HEIGHT, max(_MIN_HEIGHT, height))
+            minimum = _HTML_MIN_SIZE[1] if self._page.bundle is not None else _MIN_HEIGHT
+            wanted = min(_MAX_HEIGHT, max(minimum, height))
             _resize_window(self._window, self._page.width, wanted)
         done = state.get("done")
         kind = done.get("kind") if isinstance(done, dict) else None
@@ -256,12 +263,14 @@ class PywebviewBackend:
 
             if macos:
                 _guard_bridge()
+            html = page.bundle is not None
             window = webview.create_window(
                 page.title,
                 html=page.html,
                 width=page.width,
                 height=_INITIAL_HEIGHT,
-                resizable=False,
+                resizable=html,
+                **({"min_size": _HTML_MIN_SIZE} if html else {}),
                 on_top=False,
             )
             native = _Session(page, window, session)

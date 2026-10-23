@@ -24,6 +24,7 @@ fenric/chrome.py
 fenric/cli.py
 fenric/claude_permission.py
 fenric/engine.py
+fenric/html_bundle.py
 fenric/interaction.py
 fenric/mappings.py
 fenric/protocol.py
@@ -89,6 +90,7 @@ docs/images/commands-chart.png
 docs/images/commands-confirm.png
 docs/images/commands-custom.png
 docs/images/commands-form.png
+docs/images/commands-html.png
 docs/images/commands-notify.png
 docs/images/commands-pick-multiple.png
 docs/images/commands-pick.png
@@ -140,6 +142,7 @@ fenric/chrome.py
 fenric/cli.py
 fenric/claude_permission.py
 fenric/engine.py
+fenric/html_bundle.py
 fenric/interaction.py
 fenric/mappings.py
 fenric/protocol.py
@@ -159,6 +162,12 @@ package.py
 preview/conftest.py
 preview/gallery.py
 preview/harness.py
+preview/html-sample/data.json
+preview/html-sample/index.html
+preview/html-sample/pages/detail.html
+preview/html-sample/selected.png
+preview/html-sample/style.css
+preview/html-sample/view.js
 preview/run.py
 preview/samples.py
 preview/test_behavior.py

@@ -207,7 +207,7 @@ def end(renderer, thread):
     assert not thread.is_alive()
 
 
-def test_http_refuses_foreign_and_malformed_requests(capfd, monkeypatch):
+def test_http_refuses_foreign_and_malformed_requests(capfd, monkeypatch, tmp_path):
     monkeypatch.setattr(remote, "REQUEST_SECONDS", 0.05)
     writes = []
     session = Session(None, lambda payload: payload, lambda value: writes.append(value) or "ok")
@@ -280,6 +280,165 @@ def test_http_refuses_foreign_and_malformed_requests(capfd, monkeypatch):
         transport.close()
     output = capfd.readouterr()
     assert output.out == output.err == ""
+    from fenric.html_bundle import load_bundle
+
+    (tmp_path / "index.html").write_bytes(b"<h1>Original</h1>")
+    (tmp_path / "image.png").write_bytes(b"x" * 200000)
+    (tmp_path / "unselected.html").write_text("SENTINEL")
+    bundle = load_bundle(str(tmp_path), "index.html", ["index.html", "image.png"])
+    (tmp_path / "index.html").write_text("CHANGED")
+    session = Session(None, lambda p: p, lambda v: "ok")
+    page = build_page(
+        validate_spec(
+            {
+                "verb": "html",
+                "root": str(tmp_path),
+                "entry": "index.html",
+                "files": ["index.html", "image.png"],
+            }
+        ),
+        bundle=bundle,
+        file_token="selected-capability",
+        remote=True,
+        frame_url="/selected-capability/files/index.html",
+    )
+    transport = remote.Transport(page, session, HOST + ":8443", LOGIN)
+    try:
+        prefix = "/selected-capability/files/"
+        code, body, headers = request(transport, path=prefix + "index.html?cache=1")
+        assert (code, body) == (200, b"<h1>Original</h1>")
+        assert headers["Content-Type"] == "text/html; charset=utf-8"
+        assert headers["Access-Control-Allow-Origin"] == "null"
+        assert transport.origin + prefix in headers["Content-Security-Policy"]
+        assert "unsafe-eval" not in headers["Content-Security-Policy"]
+        assert request(transport, path=prefix + "image.png")[1] == b"x" * 200000
+        for path in [
+            prefix + "unselected.html",
+            prefix + "%2e%2e/index.html",
+            prefix + "dir//index.html",
+            "/other/files/index.html",
+        ]:
+            assert request(transport, path=path)[0] == 403
+        assert request(transport, path=prefix + "index.html", headers=[])[0] == 403
+        session.settle(backend.Outcome(backend.CANCELLED))
+        assert request(transport, path=prefix + "index.html")[0] == 403
+    finally:
+        transport.close()
+
+    # An assets-only desktop listener cannot answer, expose outer state, or serve
+    # another invocation's selection. Its capability closes with its session.
+    session = Session(None, lambda p: p, lambda v: "ok")
+    local = remote.Transport(page, session, "", "", local=True)
+    try:
+        headers = [("Host", local.authority)]
+        assert (
+            request(local, path=prefix + "index.html", headers=headers)[1] == b"<h1>Original</h1>"
+        )
+        for endpoint in (local.path, local.path + "/state", "/other/files/index.html"):
+            assert request(local, path=endpoint, headers=headers)[0] == 403
+        assert request(local, path=prefix + "index.html", headers=[("Host", "wrong")])[0] == 403
+        assert (
+            request(
+                local,
+                path=local.path + "/action",
+                method="POST",
+                headers=headers,
+                raw=b'{"kind":"cancel"}',
+            )[0]
+            == 403
+        )
+        assert not session.done.is_set()
+    finally:
+        local.close()
+        session.close()
+
+    other_bundle = load_bundle(str(tmp_path), "index.html", ["index.html"])
+    other_page = build_page(
+        validate_spec(
+            {"verb": "html", "root": str(tmp_path), "entry": "index.html", "files": ["index.html"]}
+        ),
+        bundle=other_bundle,
+        file_token="second-capability",
+    )
+    first_session = Session(None, lambda p: p, lambda v: "ok")
+    second_session = Session(None, lambda p: p, lambda v: "ok")
+    first = remote.Transport(page, first_session, "", "", local=True)
+    second = remote.Transport(other_page, second_session, "", "", local=True)
+    first_closed = False
+    try:
+        first_headers = [("Host", first.authority)]
+        second_headers = [("Host", second.authority)]
+        assert (
+            request(first, path=first.files_path + "index.html", headers=first_headers)[1]
+            == b"<h1>Original</h1>"
+        )
+        assert (
+            request(second, path=second.files_path + "index.html", headers=second_headers)[1]
+            == b"CHANGED"
+        )
+        assert (
+            request(first, path=second.files_path + "index.html", headers=first_headers)[0] == 403
+        )
+        assert (
+            request(second, path=first.files_path + "index.html", headers=second_headers)[0] == 403
+        )
+        first_session.settle(backend.Outcome(backend.CANCELLED))
+        first.close()
+        first_closed = True
+        assert (
+            request(second, path=second.files_path + "index.html", headers=second_headers)[1]
+            == b"CHANGED"
+        )
+        assert not second_session.done.is_set()
+    finally:
+        if not first_closed:
+            first.close()
+        second.close()
+        first_session.close()
+        second_session.close()
+
+    # Force backpressure while permitting each bounded write: the total transfer
+    # exceeds a write timeout, but no individual chunk stalls for that duration.
+    import socket
+
+    original_get_request = remote._Server.get_request
+
+    def small_send_buffer(server):
+        connection, address = original_get_request(server)
+        connection.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
+        return connection, address
+
+    monkeypatch.setattr(remote._Server, "get_request", small_send_buffer)
+    monkeypatch.setattr(remote, "REQUEST_SECONDS", 0.5)
+    data = b"z" * (8 * 1024 * 1024)
+    (tmp_path / "large.png").write_bytes(data)
+    large = load_bundle(str(tmp_path), "index.html", ["index.html", "large.png"])
+    spec = validate_spec(
+        {
+            "verb": "html",
+            "root": str(tmp_path),
+            "entry": "index.html",
+            "files": ["index.html", "large.png"],
+        }
+    )
+    session = Session(None, lambda p: p, lambda v: "ok")
+    page = build_page(spec, bundle=large, file_token="slow-capability")
+    local = remote.Transport(page, session, "", "", local=True)
+    connection = http.client.HTTPConnection("127.0.0.1", local.server.server_port, timeout=4)
+    try:
+        connection.request("GET", local.files_path + "large.png", headers={"Host": local.authority})
+        response = connection.getresponse()
+        received = bytearray()
+        started = time.monotonic()
+        while chunk := response.read(65536):
+            received.extend(chunk)
+            time.sleep(0.01)
+        assert response.status == 200 and received == data
+        assert time.monotonic() - started > remote.REQUEST_SECONDS
+    finally:
+        connection.close()
+        local.close()
+        session.close()
 
 
 def test_remote_desktop_race_stores_once_and_replays(tailnet, tmp_path, capfd):

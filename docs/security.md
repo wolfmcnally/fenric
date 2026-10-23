@@ -44,8 +44,13 @@ What reaches the screen is the heading, the paragraphs, the link's text and the 
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
+
+## Selected HTML bundles
+
+`html` preserves caller-selected HTML and presentation asset bytes instead of using the `custom` sanitizer. It reads an exact bounded manifest of regular files before display, refuses symlink components and traversal, and never serves a directory or reads paths from HTTP. The generated badge and result controls remain outside an opaque `allow-scripts` frame. Every selected resource carries a policy restricted to its own fresh file-capability prefix, including after relative navigation: selected scripts/styles/data are usable; external networking, parent access, unsafe-eval, forms, popups, workers and nested frames are not granted. Inline script/style and data/blob images/fonts are permitted. Scripts have no answer/touch adapter or native authority. Acknowledging the outer dialog is presentation only.
+
+Desktop uses a short-lived loopback asset listener with a separate random capability; it exposes no page, state or action endpoint. The phone outer page permits same-origin frames because its final receiving host is selected during remote setup; every selected document still has its own absolute file-prefix resource policy. Phone assets require both their separate file capability and the existing authenticated Tailscale host/login checks. Neither content nor source filenames are logged. Only bounded snapshots are served; reads stop at settlement/expiry and listeners close with their owning invocation. The caller still owns choosing nonsecret presentation material; file type checks cannot identify raw provider records or confidential data. See [exact bounds](spec.md#html).
 
 ## Charts
 
@@ -101,3 +106,5 @@ Non-chart remote chrome receives only same-origin requests and custom remains in
 A single clock, interaction state and deadline cover both surfaces. Opening or reloading does not count as interaction. The caller may cancel; handled endings and parent death stop the session's owned foreground Serve child, preserving other mappings. Network/setup/announcement operations are bounded. Following settlement the address allows a bounded 0.5-second acknowledgement window for outcome replay, then disappears. Remote HTTP replies contain no answer. Readiness probes ignore unrelated environment proxies and verify HTTPS certificates.
 
 Each browser page uses an opaque request marker. A losing page is told the dialog completed on another surface; it does not claim that its own entered value was stored. Retrying the same marker returns that recorded acknowledgement and never runs a sink twice. Markers and answers are not echoed in responses.
+
+The browser stops after three consecutive failed exchanges, waiting 0.5 then 1 second between retries; a successful exchange resets the failure count. Each request still has a 3-second timeout. On disconnection it removes stale controls and reports the response as unconfirmed, rather than claiming approval, cancellation or proved expiry. The server's original result and deadline remain unchanged: a lost acknowledgement may follow a completed effect and outlast the server’s short replay window, so recovery is not guaranteed. The caller must reconcile its own result before retrying an operation.

@@ -2,6 +2,18 @@
 
 All notable changes to Fenric are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Until 1.0, a minor version may change the spec or the command line.
 
+## [0.2.0] — unreleased
+
+### Added
+
+- Unchanged selected-file HTML reviews with relative navigation and explicitly selected presentation assets, bounded byte snapshots and an opaque frame on desktop and configured phone surfaces. No arbitrary directory serving or external network access.
+- Resizable native selected-HTML windows: one initial fit within the usable display, followed by person-controlled sizing with an adapting scrollable content frame and separate trusted controls. Other dialog sizing, focus safety and deadlines remain unchanged.
+
+### Fixed
+
+- Stop remote state polling after three consecutive failed exchanges, reset the count after successful exchanges and clear stale response controls with an explicit unconfirmed-response message. Normal expiry and one-use settlement remain unchanged.
+- Keep remote configuration diagnostics out of captured documentation examples while preserving real runtime diagnostics.
+
 ## [0.1.0] — 2026-10-22
 
 First public release.

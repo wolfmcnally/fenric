@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import types
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -275,6 +276,7 @@ def test_opening_does_not_activate_or_disable_later_keyboard_focus(
         _show(page())
         assert fake.activation == ["order"]
         assert fake.created["on_top"] is False
+        assert fake.created["resizable"] is False and "min_size" not in fake.created
         assert fake.created.get("focus", True) is True
         assert fake.browser.shown.is_set()
         assert fake.browser_class.first_show is fake.original_first_show
@@ -320,6 +322,45 @@ def test_hard_deadline_rule() -> None:
     assert hard_deadline(5, touched=False) == 17.0
     assert hard_deadline(5, touched=True) == 300.0
     assert hard_deadline(600, touched=True) == 612.0
+
+
+def test_selected_html_window_preserves_person_chosen_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fenric.html_bundle import HtmlBundle
+
+    rendered = replace(page(), bundle=HtmlBundle("index.html", {}))
+    for platform in ("darwin", "linux"):
+        states = [{**IDLE, "height": height} for height in (40, 500, 700)]
+        states.append({**states[-1], "done": {"kind": "cancel"}})
+        fake = WebView(monkeypatch, states, platform=platform)
+        evaluate = fake.window.evaluate_js
+
+        def person_sized(script: str) -> Any:
+            if script == "window.fenric" and fake.window.reads == 1:
+                fake.window.native_frame = rect(150, 200, 1000, 650)
+            return evaluate(script)
+
+        fake.window.evaluate_js = person_sized
+        assert _show(rendered).kind == CANCELLED
+        assert fake.created["resizable"] is True
+        assert fake.created["min_size"] == (360, 320)
+        assert fake.window.resized == [(520, 350)]
+        if platform == "darwin":
+            current = fake.window.native_frame
+            assert (
+                current.origin.x,
+                current.origin.y,
+                current.size.width,
+                current.size.height,
+            ) == (
+                150,
+                200,
+                1000,
+                650,
+            )
+        # On the portable branch, the single resize-call assertion owns persistence.
+        assert observed == []
 
 
 def test_show_returns_what_the_page_submitted(monkeypatch: pytest.MonkeyPatch) -> None:

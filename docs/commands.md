@@ -1,6 +1,6 @@
 # Command reference
 
-`fenric` shows one dialog, waits for the person at the machine to answer it, prints the answer, and exits. Every command below runs as written from this `docs` directory, and every output, file and error shown under one is captured from Fenric itself: the tests rerun each one and fail if Fenric prints anything different. The pictures are the dialogs those commands open, rendered from the same commands. The commands that name a file use the [worked examples](examples.md).
+`fenric` shows one dialog, waits for the person at the machine to answer it, prints the answer, and exits. Every command below runs as written from this `docs` directory, and every output, file and error shown under one is captured from Fenric itself: the tests rerun each one and compare the displayed output, omitting only the optional `fenric: remote: unavailable: not configured` stderr status. Other diagnostics are retained. The pictures are the dialogs those commands open, rendered from the same commands. The commands that name a file use the [worked examples](examples.md).
 
 ## Invocation
 
@@ -28,7 +28,6 @@ Pressing **Yes** prints:
 
 ```text
 true
-fenric: remote: unavailable: not configured
 ```
 
 ```bash
@@ -42,7 +41,6 @@ The option replaced the spec's message. Pressing **Not now** prints:
 
 ```text
 false
-fenric: remote: unavailable: not configured
 ```
 
 ```bash
@@ -89,6 +87,8 @@ positional arguments:
                         object keyed by input id.
     custom              Show sanitized HTML in an inert frame. Prints ok.
     chart               Show a d3 chart written in TypeScript. Prints ok.
+    html                Show unchanged explicitly selected HTML and supporting
+                        files. Prints ok.
     interact            Answer a host-admitted request on an inherited private
                         channel.
     setup-charts        Provision the chart toolchain into the per-user cache.
@@ -122,7 +122,7 @@ fenric --version
 It prints the version:
 
 ```text
-fenric 0.1.0
+fenric 0.2.0
 ```
 
 ## Focus and deliberate keyboard responses
@@ -160,7 +160,6 @@ Left untouched until the ring drains, it prints the reason and writes the reques
 
 ```text
 unavailable: timed out
-fenric: remote: unavailable: not configured
 ```
 
 `pending.txt`:
@@ -213,7 +212,6 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 ```bash
@@ -250,7 +248,6 @@ Pressing **Keep** prints:
 
 ```text
 false
-fenric: remote: unavailable: not configured
 ```
 
 <!-- capture {"answer": "cancel", "exit": 2} -->
@@ -258,7 +255,6 @@ Pressing Escape, or closing the window, is a cancel:
 
 ```text
 cancelled
-fenric: remote: unavailable: not configured
 ```
 
 ### pick
@@ -283,7 +279,6 @@ Choosing **production** and pressing OK prints:
 
 ```text
 "production"
-fenric: remote: unavailable: not configured
 ```
 
 ```bash
@@ -297,7 +292,6 @@ Ticking **docs** and then **lint** prints them in the options' order:
 
 ```text
 ["lint","docs"]
-fenric: remote: unavailable: not configured
 ```
 
 ### ask
@@ -326,7 +320,6 @@ Typing a branch name and a note and pressing OK prints:
 
 ```text
 {"q1":"fix-login-timeout","q2":"Leave the session code alone."}
-fenric: remote: unavailable: not configured
 ```
 
 For screenshot comments, use `--gallery-file` with the [manifest contract](spec.md#images-and-screenshot-galleries) and [worked example](examples.md#comment-on-screenshots). Image filenames resolve relative to the manifest. Back/Next and review/Edit preserve comments while the page is open, and results retain the manifest's image IDs. The example sets `timeout` to 3600; without it the ordinary hard limit is five minutes even after interaction. Image inspection cancels the visible countdown, not the hard deadline.
@@ -355,7 +348,6 @@ With a `.env` that already holds a comment and an exported setting, typing a key
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 and the key is added in the file's own style, everything else left as it was:
@@ -379,7 +371,6 @@ The store's own output is discarded, so Fenric prints only:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 and the store received the value on its standard input:
@@ -431,7 +422,6 @@ Filling it in and pressing OK prints:
 
 ```text
 {"summary":"Plugins can add verbs","kind":"major","announce":false,"notes":"Breaks the 1.x plugin API."}
-fenric: remote: unavailable: not configured
 ```
 
 ### custom
@@ -456,7 +446,33 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
+```
+
+### html
+
+| Option | Meaning |
+|---|---|
+| `--title` | Heading outside the embedded content. |
+| `--root` | Selected directory; relative to the caller's working directory. |
+| `--entry` | Selected HTML entry path relative to the root. |
+| `--file` | One selected support or entry file; repeat for each exact relative path. |
+| `--height` | Requested frame height, 100 to 2000 pixels; default 420. Guides the initial desktop fit; the frame then follows the resized window. |
+
+Embed unchanged selected HTML with relative navigation and presentation scripts, without compiling a chart or weakening `custom` sanitization. A JSON spec's `files` array is convenient for larger selections. See [the selection and containment contract](spec.md#html). Choose only presentation files; unavailable links remain refused. Embedded interactions never approve anything or extend the deadline.
+
+On desktop, selected HTML windows fit once within the usable display area and can then be resized. The requested height guides that initial fit; the content frame grows or shrinks with the chosen window, scrolling longer documents. Trusted controls remain outside the embedded content, with outer scrolling if needed at a small size. Resizing does not engage an answer or extend the deadline. Other dialog types retain their content-sized windows; configured phone presentation keeps its existing frame-height behavior.
+
+```bash
+fenric html --title "Selected report" --root report --entry index.html --file index.html --file style.css --height 240
+```
+
+![An unchanged selected report inside Fenric's generated-content frame](images/commands-html.png)
+
+<!-- capture {"answer":{"action":"ok","values":{}},"setup":{"report/index.html":"<!doctype html><html><head><link rel=\"stylesheet\" href=\"style.css\"></head><body><h1>Selected report</h1><p>Original caller content.</p></body></html>","report/style.css":"body { font-family: sans-serif; } h1 { color: steelblue; }"}} -->
+Pressing OK acknowledges the view and prints:
+
+```text
+ok
 ```
 
 ### chart
@@ -481,7 +497,6 @@ Pressing OK prints:
 
 ```text
 ok
-fenric: remote: unavailable: not configured
 ```
 
 ### interact

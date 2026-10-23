@@ -67,7 +67,7 @@ def test_help_lists_every_verb_and_the_placeholder_is_gone(
     with pytest.raises(SystemExit):
         main(["--help"])
     listed = capsys.readouterr().out
-    assert len(VERBS) == 8
+    assert len(VERBS) == 9
     for verb in (*VERBS, "setup-charts"):
         assert f"\n    {verb} " in listed
     assert main(["version"]) == 3

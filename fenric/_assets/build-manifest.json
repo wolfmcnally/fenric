@@ -36,9 +36,9 @@
     "robust-predicates": "3.0.3"
   },
   "inputs": {
-    "assets/ts/chrome.ts": "e18d83d9f8e19a24492cd5ad30b41fc9fe8db9b0cd27eb91f473dc93b88287d3",
+    "assets/ts/chrome.ts": "0e3216cc553f593e77d5c47fa623b8efccf7ef4bfe281203bc64d64ff9796718",
     "assets/ts/d3-runtime.ts": "142d716e5e342283b56c0201bfbd81a14fadec955f122d87d370293cb9738279",
-    "assets/ts/remote.ts": "19cfedfbdeb4bce3d3a158e511b65207f9d6ed8a875fe69e2e918c37ccb05477",
+    "assets/ts/remote.ts": "0217c634fbd01421b96845ade8a65279c68bf6afe017d58fba0330f5b181d1ea",
     "build_assets.py": "b1cb851e10d6992d3e2570d4a292439bd465a451b985930aa53f0c4ece919da4",
     "bun.lock": "09b3bb8873208092e84f28a5ae75a8e5e4b5223ebc5fa44b7b7cc620a581a16b",
     "package.json": "4336b5eb697a1cd434079b1db18b401a9759fa190e10602217047e6d484407a5",
@@ -46,9 +46,9 @@
   },
   "outputs": {
     "fenric/_assets/THIRD_PARTY_NOTICES.md": "2a86245bc9c3fab4f6defaf574b3e7a651a35075b011f44ae5d2bbadf71c3c92",
-    "fenric/_assets/chrome.js": "7b0ea04590d222e0740d5588ae10f4510531a8cbc56083b19e0ea87b2aafb4ed",
+    "fenric/_assets/chrome.js": "dab6079283e3d11031ea532be33edaa9c0c4430d8112c6a49501014458b311f5",
     "fenric/_assets/d3.js": "e814b62861dc22d5a347264f6136d4ec9d922b27a9b9f54e6eeacb6c40fe3eeb",
-    "fenric/_assets/remote.js": "c3ad7bfde6bebd205e58aa5323c6d2796367cb1d1c809cfb65751376935b8aa9",
+    "fenric/_assets/remote.js": "3f53b15c942488857afbc33104c67e52f3d2da7f51d2f31c6088828ba7f118d6",
     "fenric/_toolchain/bun.lock": "09b3bb8873208092e84f28a5ae75a8e5e4b5223ebc5fa44b7b7cc620a581a16b",
     "fenric/_toolchain/package.json": "4336b5eb697a1cd434079b1db18b401a9759fa190e10602217047e6d484407a5",
     "fenric/_toolchain/tsconfig.json": "1295a6161f7a4c4d745c5dca18f085b0099ed11693c6063f1894a05df4055213"

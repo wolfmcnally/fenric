@@ -6,6 +6,7 @@ it is used, so a sample that no longer matches the spec reference fails.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 APP = "Release bot"
@@ -53,6 +54,21 @@ CHART_DATA = [
 ]
 
 SAMPLES: dict[str, dict[str, Any]] = {
+    "html": {
+        "verb": "html",
+        "app": APP,
+        "title": "Static report",
+        "root": str(Path(__file__).with_name("html-sample")),
+        "entry": "index.html",
+        "files": [
+            "index.html",
+            "pages/detail.html",
+            "style.css",
+            "view.js",
+            "data.json",
+            "selected.png",
+        ],
+    },
     "notify": {
         "verb": "notify",
         "app": APP,

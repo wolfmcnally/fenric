@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from harness import Dialog, close_proxy_context, open_dialog, proxy_dialog
-from playwright.sync_api import Browser
+from playwright.sync_api import Browser, expect
 from samples import SAMPLES
 
 from fenric.chrome import build_page
@@ -45,6 +45,108 @@ def submitted(dialog: Dialog) -> dict[str, Any]:
 
 def test_the_samples_cover_every_verb() -> None:
     assert {sample["verb"] for sample in SAMPLES.values()} == set(VERBS)
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+@pytest.mark.parametrize("remote_surface", [False, True])
+def test_selected_html_preserves_navigation_and_opaque_resource_boundary(
+    browser: Browser, open_: Open, scheme: str, remote_surface: bool
+) -> None:
+    import secrets
+
+    from fenric.html_bundle import load_bundle
+    from fenric.remote import Transport
+    from fenric.session import Session
+    from fenric.spec import validate_spec
+
+    raw = SAMPLES["html"]
+    context = None
+    transport = None
+    session = None
+    if remote_surface:
+        spec = validate_spec(raw)
+        bundle = load_bundle(spec.fields["root"], spec.fields["entry"], spec.fields["files"])
+        token = secrets.token_urlsafe(32)
+        built = build_page(
+            spec,
+            remote=True,
+            bundle=bundle,
+            file_token=token,
+            frame_url=f"/{token}/files/index.html",
+        )
+        session = Session(None, lambda p: None, lambda v: "ok")
+        transport = Transport(built, session, "fixture.invalid:8443", "owner@example.com")
+        context = browser.new_context(color_scheme=scheme, viewport={"width": 375, "height": 800})
+        context.route(
+            "https://fixture.invalid:8443/**", lambda route: proxy_dialog(route, transport)
+        )
+        page = context.new_page()
+        page.goto(transport.origin + transport.path)
+    else:
+        dialog = open_(raw, scheme=scheme)
+        page = dialog.page
+        page.set_viewport_size({"width": 375, "height": 800})
+    try:
+        outside = []
+        page.context.route(
+            "https://outside.invalid/**",
+            lambda route: (outside.append(route.request.url), route.abort()),
+        )
+        frame = page.frame_locator("#fenric-html")
+        expect(frame.locator("#data")).to_have_text("Selected presentation data")
+        expect(frame.locator("h1")).to_have_css("color", "rgb(70, 130, 180)")
+        assert frame.locator("#inline-image").evaluate("e=>e.naturalWidth") == 1
+        assert frame.locator("#selected-image").evaluate("e=>e.naturalWidth") == 1
+        assert page.evaluate("window.fenric.done") is None
+        if not remote_surface:
+            # The initial fit measures natural chrome + the requested frame,
+            # rather than echoing the current viewport and feeding resize back.
+            page.set_viewport_size({"width": 520, "height": 230})
+            natural = page.evaluate("window.fenric.height")
+            assert 420 < natural < 800
+            page.set_viewport_size({"width": 520, "height": natural})
+            assert page.locator("main").evaluate("e=>e.scrollHeight <= e.clientHeight + 1")
+            frame.locator("body").evaluate(
+                "body=>{const p=document.createElement('p');"
+                "p.textContent='Synthetic long review content. '.repeat(1000);body.append(p)}"
+            )
+            page.set_viewport_size({"width": 360, "height": 290})
+            small = page.locator("#fenric-html").bounding_box()
+            assert small is not None and small["width"] > 250 and small["height"] >= 100
+            button = page.locator("button[data-primary]")
+            button.scroll_into_view_if_needed()
+            bounds = button.bounding_box()
+            assert bounds and bounds["y"] >= 0 and bounds["y"] + bounds["height"] <= 290
+            inner_scroll = frame.locator("body").evaluate(
+                "()=>{const s=document.scrollingElement;s.scrollTop=60;"
+                "return {height:s.scrollHeight,client:s.clientHeight,top:s.scrollTop}}"
+            )
+            assert inner_scroll["height"] > inner_scroll["client"] and inner_scroll["top"] > 0
+            page.set_viewport_size({"width": 1000, "height": 1000})
+            large = page.locator("#fenric-html").bounding_box()
+            assert large and large["height"] - small["height"] > 500
+            assert large["width"] - small["width"] > 600
+            assert page.evaluate("window.fenric.done") is None
+            assert not page.evaluate("window.fenric.touched")
+            assert "touched" not in (page.locator("body").get_attribute("class") or "").split()
+        frame.get_by_role("link", name="Open detail").click()
+        expect(frame.locator("h1")).to_have_text("Detail page")
+        assert frame.locator("body").get_attribute("data-parent") == "isolated"
+        assert page.evaluate("window.fenric.done") is None
+        assert frame.locator("body").evaluate(
+            "()=>fetch('https://outside.invalid/nope').then(()=>false,()=>true)"
+        )
+        assert outside == []
+        frame.get_by_role("link", name="Return to report").click()
+        expect(frame.locator("#data")).to_have_text("Selected presentation data")
+        assert page.evaluate("window.fenric.done") is None
+    finally:
+        if context:
+            close_proxy_context(context)
+        if transport:
+            transport.close()
+        if session:
+            session.close()
 
 
 @pytest.mark.parametrize("scheme", ["light", "dark"])
@@ -611,6 +713,168 @@ def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, t
             assert errors == []
         finally:
             close_proxy_context(context)
+            transport.close()
+            session.close()
+
+    # Retain the real remote adapter/HTTP boundary above for expiry, connection
+    # loss and lost acknowledgements. Navigation and fetches are distinct facts.
+    from threading import Event, Timer
+
+    from fenric.remote import TERMINAL_SECONDS
+
+    for scenario in (
+        "expiry",
+        "gone",
+        "unreachable",
+        "transient",
+        "lost-ack",
+        "lost-ack-teardown",
+        "unknown-answer",
+    ):
+        spec = validate_spec(
+            {
+                "verb": "notify",
+                "message": "Synthetic connection test",
+                "copy_text": "Inert text",
+                "timeout": 60,
+            }
+        )
+        effects = []
+        session = Session(
+            60,
+            lambda value: validate_result(spec, value),
+            lambda value: effects.append(value) or "ok",
+        )
+        session.start()
+        transport = Transport(
+            build_page(spec, remote=True), session, "phone.tail123.ts.net:8443", "owner@example.com"
+        )
+        context = browser.new_context(
+            viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True
+        )
+        page = context.new_page()
+        counts = {"documents": 0, "states": 0, "failed": 0, "submits": 0, "touches": 0}
+        failing = False
+        failure_limit = 2
+        removed = Event()
+        teardown = None
+
+        def connection(route):
+            incoming = route.request
+            if incoming.is_navigation_request():
+                counts["documents"] += 1
+            if incoming.method == "POST" and incoming.post_data_json.get("kind") == "touch":
+                counts["touches"] += 1
+            if removed.is_set() and not incoming.is_navigation_request():
+                route.abort("connectionrefused")
+                return
+            if incoming.url.endswith("/state"):
+                counts["states"] += 1
+                if failing and scenario in {"gone", "unreachable", "transient"}:
+                    if scenario != "transient" or counts["failed"] < failure_limit:
+                        counts["failed"] += 1
+                        if scenario == "gone":
+                            route.fulfill(status=410, body="gone")
+                        else:
+                            route.abort("connectionrefused")
+                        return
+            if incoming.method == "POST" and incoming.post_data_json.get("kind") == "submit":
+                counts["submits"] += 1
+                if (
+                    scenario == "unknown-answer"
+                    or scenario in {"lost-ack", "lost-ack-teardown"}
+                    and counts["submits"] == 1
+                ):
+                    # Deliver to the real first-settlement sink, then lose only
+                    # the acknowledgement. Never manufacture a successful answer.
+                    response = route.fetch(
+                        url=f"http://127.0.0.1:{transport.server.server_port}"
+                        + transport.path
+                        + "/action",
+                        headers={
+                            **incoming.headers,
+                            "Host": transport.authority,
+                            "X-Forwarded-Host": transport.authority,
+                            "X-Forwarded-Proto": "https",
+                            "Tailscale-User-Login": "owner@example.com",
+                        },
+                    )
+                    assert response.ok
+                    if scenario == "lost-ack-teardown":
+                        # Model the real Remote.close grace period, including
+                        # removal of the actual transport, not an immortal replay server.
+                        nonlocal teardown
+
+                        def close_after_settlement():
+                            removed.set()
+                            transport.close()
+
+                        teardown = Timer(TERMINAL_SECONDS, close_after_settlement)
+                        teardown.start()
+                    route.abort("connectionreset")
+                    return
+            proxy_dialog(route, transport)
+
+        context.route("**/*", connection)
+        try:
+            page.goto(transport.origin + transport.path)
+            page.locator(".ring-fill[style]").wait_for()
+            if scenario in {"expiry", "gone", "unreachable"}:
+                session.started -= 61  # test-only monotonic elapsed-time advance
+                session.expire()
+                assert session.done.is_set() and session.status == "unavailable"
+            failing = True
+            if scenario in {"lost-ack", "lost-ack-teardown", "unknown-answer"}:
+                page.locator("button[data-primary]").click()
+            if scenario == "transient":
+                page.wait_for_timeout(2200)
+                assert counts["failed"] == 2
+                assert page.get_by_text("Synthetic connection test", exact=True).is_visible()
+                # A fresh burst after a proven recovery must not inherit the
+                # first burst's count. Removing reset makes this deterministically terminal.
+                failure_limit = 4
+                page.wait_for_timeout(2200)
+                assert counts["failed"] == 4 and not session.done.is_set()
+                assert page.get_by_text("Synthetic connection test", exact=True).is_visible()
+            else:
+                heading = (
+                    "unavailable"
+                    if scenario == "expiry"
+                    else "Sent!"
+                    if scenario == "lost-ack"
+                    else "Connection unavailable. This view may have expired. "
+                    "Any response is unconfirmed."
+                )
+                if scenario == "lost-ack-teardown":
+                    terminal = page.locator("main.terminal h1")
+                    terminal.wait_for(timeout=4000)
+                    assert terminal.inner_text() in {
+                        "Sent!",
+                        "Connection unavailable. This view may have expired. "
+                        "Any response is unconfirmed.",
+                    }
+                    assert session.status == "ok" and len(effects) == 1
+                else:
+                    page.get_by_role("heading", name=heading, exact=True).wait_for(timeout=4000)
+                before = dict(counts)
+                page.wait_for_timeout(350)
+                assert counts == before, "terminal views must stop network activity"
+                assert page.locator("button").count() == 0
+                if scenario in {"gone", "unreachable"}:
+                    assert counts["failed"] == 3
+                if scenario == "unknown-answer":
+                    assert counts["submits"] == 3 and session.status == "ok"
+            assert counts["documents"] == 1, "no document reload was reproduced"
+            assert len(effects) == (
+                1 if scenario in {"lost-ack", "lost-ack-teardown", "unknown-answer"} else 0
+            )
+            if scenario in {"expiry", "gone", "unreachable", "transient"}:
+                assert counts["touches"] == 0 and session.state()["touched"] is False
+        finally:
+            close_proxy_context(context)
+            if teardown is not None:
+                teardown.join(timeout=2)
+                assert not teardown.is_alive(), "owned teardown must be terminal"
             transport.close()
             session.close()
 
