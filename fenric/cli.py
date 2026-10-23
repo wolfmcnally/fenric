@@ -195,6 +195,14 @@ def build_parser() -> argparse.ArgumentParser:
     from fenric.guidance import configure_parser
 
     configure_parser(guidance_parser)
+    lifecycle_parser = verbs.add_parser(
+        "lifecycle",
+        allow_abbrev=False,
+        help="Inspect installation and propose a read-only skill lifecycle plan.",
+    )
+    from fenric.lifecycle import configure_parser as configure_lifecycle
+
+    configure_lifecycle(lifecycle_parser)
     return parser
 
 
@@ -207,10 +215,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_OK
     try:
         args = parser.parse_args(arguments)
+        if args.verb == "lifecycle":
+            from fenric.lifecycle import execute as execute_lifecycle
+
+            allowed = {
+                "verb",
+                "lifecycle_command",
+                "home",
+                "project",
+                "executable",
+                "scope",
+                "remove",
+                "target",
+            }
+            if set(vars(args)) - allowed:
+                raise _Refusal(_USAGE_ERROR)
+            return execute_lifecycle(args)
         if args.verb == "guidance":
             from fenric.guidance import execute
 
-            allowed = {"verb", "guidance_command", "home", "plan", "remove", "backup_dir", "skill"}
+            allowed = {
+                "verb",
+                "guidance_command",
+                "home",
+                "plan",
+                "remove",
+                "backup_dir",
+                "skill",
+                "installer",
+            }
             if set(vars(args)) - allowed:
                 raise _Refusal(_USAGE_ERROR)
             return execute(args)

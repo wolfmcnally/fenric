@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import email
 import io
+import json
 import os
 import re
 import subprocess
@@ -35,6 +36,8 @@ SHIPPED = (
     "LICENSE",
     "fenric/_guidance/fenric/SKILL.md",
     "fenric/_guidance/fenric/guide.md",
+    "fenric/_guidance/fenric-install/SKILL.md",
+    "fenric/_guidance/fenric-install/guide.md",
     "fenric/_assets/THIRD_PARTY_NOTICES.md",
     "fenric/_assets/build-manifest.json",
     "fenric/_assets/chrome.js",
@@ -176,7 +179,12 @@ def test_the_installed_command_runs_from_any_directory(
     assert "setup-charts" in help_run.stdout
     assert "interact" in help_run.stdout
     assert "fenric guidance read" in help_run.stdout
-    for arguments, filename in (([], "guide.md"), (["--skill"], "SKILL.md")):
+    for arguments, filename, bundle in (
+        ([], "guide.md", "fenric"),
+        (["--skill"], "SKILL.md", "fenric"),
+        (["--installer"], "guide.md", "fenric-install"),
+        (["--installer", "--skill"], "SKILL.md", "fenric-install"),
+    ):
         read_run = subprocess.run(
             [command, "guidance", "read", *arguments],
             cwd=elsewhere,
@@ -184,12 +192,29 @@ def test_the_installed_command_runs_from_any_directory(
             capture_output=True,
             text=True,
         )
-        guide = PROJECT / "fenric/_guidance/fenric" / filename
+        guide = PROJECT / "fenric/_guidance" / bundle / filename
         assert (read_run.returncode, read_run.stdout, read_run.stderr) == (
             0,
             guide.read_text(),
             "",
         )
+    lifecycle = subprocess.run(
+        [command, "lifecycle", "plan", "--scope", "global", "--executable", command],
+        cwd=elsewhere,
+        env=minimal,
+        capture_output=True,
+        text=True,
+    )
+    assert lifecycle.returncode == 4 and lifecycle.stderr == ""
+    observed_plan = json.loads(lifecycle.stdout)
+    assert observed_plan["complete"] is True and observed_plan["status"] == "blocked"
+    from fenric import lifecycle as implementation
+
+    for name in implementation.SKILLS:
+        source = implementation.tree(PROJECT / "fenric/_guidance" / name, resources=True)
+        assert observed_plan["desired"][name]["bundle_sha256"] == source["bundle_sha256"]
+    assert not (elsewhere / ".claude").exists()
+    assert not (elsewhere / ".codex").exists()
     bare_run = subprocess.run([command], cwd=elsewhere, env=minimal, capture_output=True, text=True)
     assert (bare_run.returncode, bare_run.stdout, bare_run.stderr) == (0, help_run.stdout, "")
     invalid_run = subprocess.run(

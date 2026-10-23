@@ -95,6 +95,8 @@ positional arguments:
                         Prints ok.
     remote              Configure the tailnet surface.
     guidance            Read agent usage guidance or review instruction setup.
+    lifecycle           Inspect installation and propose a read-only skill
+                        lifecycle plan.
 
 options:
   -h, --help            show this help message and exit
@@ -536,6 +538,7 @@ Print the canonical installed usage guide as Markdown; `--skill` prints its shor
 | Option | Meaning |
 |---|---|
 | `--skill` | Print the packaged skill entry point instead of the full guide. |
+| `--installer` | Select the passive installer-use guide or skill instead of ordinary interaction guidance. |
 
 ### guidance preview
 
@@ -560,6 +563,37 @@ Print the canonical installed usage guide as Markdown; `--skill` prints its shor
 | `--home` | Existing home whose expected read paths and guidance are checked separately. |
 
 The three commands print structured metadata/diffs, never a user answer. Check exits 4 for missing/broken/conflicting/unmanaged or outdated guidance; apply/preview may operate on one existing path while reporting the other missing. Exit 3 reports an invalid or unavailable operation. Exit 0 never proves native approval authority or live harness loading. An apply failure preserves precise backup/outcome evidence; do not blindly retry it.
+
+### lifecycle
+
+Inspect installation evidence and propose a deterministic skill lifecycle plan. This management command opens no dialog, executes no target binary, imports no target package and changes no files, configuration, constitutional instructions or runtime selection. Common dialog/spec/remote options are invalid. The passive installer-use skill is available with `fenric guidance read --installer`; installing the package does not register either skill.
+
+### lifecycle inventory
+
+| Option | Meaning |
+|---|---|
+| `--home` | Explicit existing home; defaults to HOME. Only conventional named skill candidates are inspected. |
+| `--project` | Optional explicit existing project; inventory both global and project candidates without ancestor search. |
+| `--executable` | Selected executable to inspect without running it; otherwise resolve PATH once. |
+
+The inventory reports selected symlink/file identity, bounded neighboring environment/distribution metadata, recognized untrusted manager records, artifact hash evidence where available, skill member manifests, ownership and scope conflicts. Missing runtime or undeclared skill version stays missing/unknown/null; runtime metadata never supplies a skill version. Conventional `.claude/skills`, `.codex/skills` and `.agents/skills` candidates are not evidence of configured precedence. Custom scope, actual live process version and harness-loaded skill state remain unknown. Without `--project`, project shadowing is unobserved.
+
+### lifecycle plan
+
+| Option | Meaning |
+|---|---|
+| `--home` | Explicit existing home; defaults to HOME. |
+| `--project` | Explicit existing project; required for project scope. |
+| `--executable` | Selected executable to inspect, never execute. |
+| `--scope` | Required `global` or `project`; skills are the default guidance strategy. |
+| `--target` | Repeat `claude`, `codex` or `agents` to select conventional skill roots; default `claude` and `codex`. |
+| `--remove` | Propose removal of intact owned skills; removes nothing. |
+
+The data-only plan proposes add/update/remove/no-op/blocked skill operations and records expected identities, parent identity, desired bundle manifests and a digest. There is no apply endpoint, runtime installer or command executor. An identical unowned bundle is a no-op and remains unowned; update/removal requires exact intact local receipt evidence. Modified, extra, unsafe, unreadable or conflicting targets block. Missing parent directories block adds. The receipt `.fenric-skill.json` is excluded from the bundle digest, parsed strictly and bound to name, scope-relative location, declared version and exact manifest digest; it grants no permission. Distinct roots in one scope are independent targets; global/project overlap requires review. Same-identity aliases may remain no-ops, but mutating proposals for duplicate aliases or a symlinked skill target block.
+
+Each JSON result has a `complete` boolean; a plan with incomplete observations never reports `dry-run` success. Missing artifact claims are reported as `unclaimed`, not a hash mismatch. Manager recognition reads only bounded `uv-receipt.toml`, `pipx_metadata.json`, or the selected stage's `STAGING-RECEIPT.json` with matching `cli` and `version`; these records remain untrusted local evidence. Runtime metadata links outside the selected environment refuse. Artifact comparison uses only a local wheel in the selected stage, never a directory scan. Both given and resolved input paths are retained in the plan identity, so alternate spellings can intentionally produce different plan digests.
+
+Limits are included in each inventory: 1 MiB per member, 4 MiB per tree, 128 entries, depth 8, 256 siblings, 4096 shebang bytes, 16 MiB local wheel and 16 symlink hops. Reads use bounded descriptors; member links, hardlinks and foreign ownership refuse rather than expose an arbitrary filesystem. Versions, unknown states and sorted-key JSON digests are documented in the [installer guide](../fenric/_guidance/fenric-install/guide.md). Inventory exit 0 means observations completed, including reported drift/conflict; exit 4 means incomplete observation. Plan exit 4 also means blocked operations; exit 3 is invalid input/unavailable operation. Neither status measures live harness discovery, GUI behavior or native permission readiness. Reobserve changed inputs before separately authorized manual work.
 
 ### setup-charts
 

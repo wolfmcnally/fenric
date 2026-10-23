@@ -329,6 +329,9 @@ def configure_parser(parser: Any) -> None:
         "read", allow_abbrev=False, help="Print installed agent usage guidance."
     )
     read.add_argument("--skill", action="store_true", help="print the optional skill entry point")
+    read.add_argument(
+        "--installer", action="store_true", help="read the passive installer-use guide or skill"
+    )
     for name in ("preview", "apply", "check"):
         command = commands.add_parser(name, allow_abbrev=False)
         command.add_argument("--home", help="home whose existing instruction paths are selected")
@@ -348,7 +351,12 @@ def execute(args: Any) -> int:
         if args.guidance_command == "read":
             name = "SKILL.md" if args.skill else "guide.md"
             print(
-                (Path(__file__).parent / "_guidance/fenric" / name).read_text(encoding="utf-8"),
+                (
+                    Path(__file__).parent
+                    / "_guidance"
+                    / ("fenric-install" if args.installer else "fenric")
+                    / name
+                ).read_text(encoding="utf-8"),
                 end="",
             )
             return 0

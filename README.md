@@ -36,7 +36,7 @@ pipx install .
 
 Then `fenric --help` runs from any directory.
 
-Complete the [standard agent-guidance setup](docs/setup.md) on each host: preview the exact shared-instruction diff with `fenric guidance preview --plan guidance-review.json`, review it, apply that unchanged plan with `fenric guidance apply --plan guidance-review.json --backup-dir guidance-backup`, and run `fenric guidance check`. This installs the all-response preference and authenticated-response limits only into existing explicitly reviewed instruction targets. It preserves user edits/symlinks and reports each harness's read path separately; missing paths need separate configuration. Guidance presence does not prove native approval authority. No hooks, permissions, authentication or network setup is implied.
+Prefer passive skills for [agent-guidance setup](docs/setup.md), leaving `CLAUDE.md` and `AGENTS.md` untouched. The package includes the ordinary `fenric` interaction skill and the separate `fenric-install` installer-use skill, each with its referenced guide; register complete directories only through the selected harness's supported manual procedure. Start with `fenric guidance read --installer` and `fenric lifecycle inventory`, then review a data-only plan with `fenric lifecycle plan --scope global --target claude`. These commands do not install anything or authorize changes. Runtime version, skill content and actual harness loading are separate evidence; native permissions, authentication and networking remain unchanged. Existing shared-instruction setup is a separate explicit operator choice, never the lifecycle default.
 
 ## Use
 
@@ -128,7 +128,7 @@ Fenric reports one early URL or fixed unavailable reason on stderr. Use `--remot
 
 - [Worked examples](docs/examples.md), each with its spec, its command, a picture of the dialog, and the output for each answer.
 - [Command reference](docs/commands.md): every verb and option, exit statuses, environment, time limits.
-- [Standard setup](docs/setup.md): reviewed shared agent guidance, per-harness read paths, backup/recovery and native qualification limits.
+- [Agent setup](docs/setup.md): passive skills by default, optional explicitly reviewed shared instructions, per-harness read paths and native qualification limits.
 - [Spec reference](docs/spec.md): every field, every result, and the form component catalog.
 - [Security model](docs/security.md): what Fenric trusts, inert HTML, ordinary generated charts and direct credential custody.
 

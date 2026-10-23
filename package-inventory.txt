@@ -8,6 +8,9 @@ fenric/_guidance/instructions.md
 fenric/_guidance/fenric/SKILL.md
 fenric/_guidance/fenric/guide.md
 fenric/guidance.py
+fenric/lifecycle.py
+fenric/_guidance/fenric-install/SKILL.md
+fenric/_guidance/fenric-install/guide.md
 fenric/_assets/THIRD_PARTY_NOTICES.md
 fenric/_assets/build-manifest.json
 fenric/_assets/chrome.js
@@ -126,6 +129,9 @@ fenric/_guidance/instructions.md
 fenric/_guidance/fenric/SKILL.md
 fenric/_guidance/fenric/guide.md
 fenric/guidance.py
+fenric/lifecycle.py
+fenric/_guidance/fenric-install/SKILL.md
+fenric/_guidance/fenric-install/guide.md
 fenric/_assets/THIRD_PARTY_NOTICES.md
 fenric/_assets/build-manifest.json
 fenric/_assets/chrome.js
@@ -190,6 +196,7 @@ tests/test_docs.py
 tests/test_engine.py
 tests/test_gallery.py
 tests/test_guidance.py
+tests/test_lifecycle.py
 tests/test_interaction.py
 tests/test_protocol.py
 tests/test_packaging.py

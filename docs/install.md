@@ -6,7 +6,7 @@ These are operator-run instructions, not actions performed by reading this page 
 
 Run the README's uv or pipx install command from the standalone root containing `pyproject.toml` in a checkout/source archive, or install its built wheel. Do not install an untrusted wheel merely because its filename matches. Verify the expected source/artifact identity through your release process. Source builds need the declared build backend; the repository's locked package builder verifies the archive inventory. Installing a command does not enable remote access or native harness approvals.
 
-After installation, resolve the actual command, inspect its version/help, then follow [standard guidance setup](setup.md) on each host. Instruction coverage and native approval readiness are separate. A symlink proves a read path, not that a running harness reloaded it.
+After installation, resolve the actual command, inspect its version/help, then follow [skills-first guidance setup](setup.md) on each host. Prefer complete passive skill directories and leave constitutional files untouched. `fenric guidance read --installer` explains the separate installer skill. Read-only `fenric lifecycle inventory` inspects bounded filesystem evidence without executing the selected target; `fenric lifecycle plan --scope global --target claude` emits deterministic proposed skill operations, never applies them. A missing parent, changed/unowned target or scope conflict needs review. Inventory distinguishes package version, skill declaration/content digest and unknown live loading. Native approval readiness remains separate. A symlink proves a read path, not that a running harness reloaded it.
 
 ## Update a local-source or wheel installation
 
@@ -26,9 +26,11 @@ pipx reinstall first uninstalls and then reinstalls using its recorded source/op
 
 After replacement, resolve the command again and inspect help/version and isolated import provenance. Long-running Python hosts must be restarted through their supported lifecycle to import new code; a changed executable selection does not update already-imported modules. Retain the old environment/artifact until checks and operator acceptance pass. Staged deployments that select a venv by symlink should build a new environment and switch only that existing approved selection, preserving rollback; the tool-manager commands above are not substitutes for that managed cutover procedure.
 
-Rerun guidance preview/check. Apply only a reviewed unchanged plan with a new backup directory. Package replacement never silently adopts manually edited guidance, creates missing instruction paths, installs hooks or grants permissions. No automatic migration, credential access or authentication change is implied.
+Reobserve lifecycle inventory and review a new data-only skill plan. Existing `guidance preview/check/apply` is a separate explicit shared-instruction workflow; use it only when that constitutional change is actually selected and authorized. Package replacement never silently adopts manually edited guidance, creates missing instruction paths, installs hooks or grants permissions. No automatic migration, credential access or authentication change is implied.
 
 ## Remove
+
+For passive skills, inspect `fenric lifecycle plan --scope global --remove` (select the actual scope and target roots). It proposes only intact owned skill removal and performs nothing. An identical manual copy without ownership remains unowned; preserve local edits and use the selected harness's separately authorized manual removal procedure. Skill removal does not uninstall the application or edit constitutional files.
 
 If you want managed guidance removed, preview and apply its [owned-block removal](setup.md#removal-and-recovery) before uninstalling the command. Unowned or modified prose needs explicit review. To disable configured phone access while the command is still installed, the operator can run:
 

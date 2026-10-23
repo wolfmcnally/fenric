@@ -4,6 +4,12 @@ Fenric is small on purpose: one runtime dependency (`pywebview`, imported only w
 
 All commands below run from this directory.
 
+## Delivery
+
+The primary implementation owner commits gate-proved work and makes ordinary non-force fast-forward pushes to the single unambiguous existing upstream without a separate clerical approval. Complete the applicable review/dispositions and affected checks, and qualify the exact final source tree with the full standalone checks below before pushing. Inspect live status and the complete diff, stage only explicit attributable paths, verify staged bytes and the resulting commit, then prove the local commit, tracking ref and actual remote tip agree with a clean tree. Unexpected changes, uncertain ownership, unresolved hook refusals, ambiguous upstream, rejection, divergence or residual dirt stop delivery; diagnose authorized corrections with hooks enabled and renew affected validation. Never bypass a hook or retry unchanged refused input.
+
+Delivery is separate from human acceptance: product judgment and unperformed manual or live checks remain explicit. Destructive Git operations, history rewriting, force pushes, remote creation/selection, release tags and artifact publication remain operator decisions. This delivery authority grants no installation, credential, permission, identity, settings or repository-visibility changes.
+
 ## Setup
 
 [uv](https://docs.astral.sh/uv/) manages Python and the dependencies; `.python-version` pins the interpreter and `uv.lock` the versions.

@@ -2,6 +2,8 @@
 
 For worked human-interaction recipes and decision/comment handling, read the [packaged agent guide](../fenric/_guidance/fenric/guide.md), also available offline through `fenric guidance read`.
 
+Lifecycle inventory and planning are management commands, not dialog verbs or spec fields. `fenric lifecycle inventory` emits `fenric.lifecycle-inventory.v1`; `fenric lifecycle plan --scope global` emits `fenric.lifecycle-plan.v1`. Both are read-only and write JSON only to stdout. The plan includes normalized scope/targets, observed identities and content manifests, desired packaged skill bundles, proposed operations and a SHA256 over canonical sorted-key JSON excluding the digest field itself. No timestamp, approval token or apply endpoint is included. See [lifecycle commands](commands.md#lifecycle) and the [installer guide](../fenric/_guidance/fenric-install/guide.md) for limits, ownership and unknown-state semantics. These schemas do not grant authority or settle a native request.
+
 A spec is one JSON object: a `verb` and that verb's fields. It is what `--spec` and `--spec-file` take, what the library's `run` takes as a mapping, and what the verb options of the [command](commands.md) fill in. This page lists every field, what each verb returns, and form catalog version 1.
 
 ## Every spec
