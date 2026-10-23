@@ -2,7 +2,7 @@
 
 All notable changes to Fenric are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Until 1.0, a minor version may change the spec or the command line.
 
-## [0.2.0] — unreleased
+## [0.2.0] — 2026-10-23
 
 ### Added
 
@@ -13,6 +13,7 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 - Stop remote state polling after three consecutive failed exchanges, reset the count after successful exchanges and clear stale response controls with an explicit unconfirmed-response message. Normal expiry and one-use settlement remain unchanged.
 - Keep remote configuration diagnostics out of captured documentation examples while preserving real runtime diagnostics.
+- Exclude local review and execution evidence from distribution archives, with a synthetic-marker packaging regression that checks both wheel and source archive.
 
 ## [0.1.0] — 2026-10-22
 
