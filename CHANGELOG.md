@@ -2,6 +2,10 @@
 
 All notable changes to Fenric are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Until 1.0, a minor version may change the spec or the command line.
 
+## [Unreleased]
+
+No unreleased changes.
+
 ## [0.3.0] — 2026-10-26
 
 ### Added
