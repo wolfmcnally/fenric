@@ -2,6 +2,19 @@
 
 All notable changes to Fenric are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Until 1.0, a minor version may change the spec or the command line.
 
+## [0.3.0] — 2026-10-26
+
+### Added
+
+- Selected WAV playback beside caller-prepared text or scores in the existing private selected-HTML surface. Exact selected-file media policies and immutable byte-range delivery support native browser Play, pause and seeking without granting external media access, filesystem authority or a new public route. Existing expiry and file-size limits remain; browser decoding and speaker audibility are separate from transport success.
+- Read-only lifecycle inventory and deterministic versioned dry-run plans, with separate runtime, skill-content and harness-loading evidence. Passive packaged interaction and installer skills are the default setup route; no apply endpoint, constitutional-file edit, grant or runtime installation is performed by lifecycle inspection.
+- Prominent picture-gallery and audio-preview recipes in user docs and packaged agent guidance, including proportional PNG sizing, original/copy provenance, a dialog-free WAV-selection probe, prompt authorized protected-link handoff and same-invocation result/cleanup ownership.
+- A reproducible original MIT synthetic chime, 0.6 seconds and 9644 bytes, for the source-documentation audio example. The source archive includes only this named tiny demo audio; the wheel includes no audio. Packaging tests exclude private/large local media and execution evidence.
+
+### Fixed
+
+- Test-only private-transport teardown accounts for a listener disappearing after the route's removal check, preserving failure for unrelated proxy errors and the original response assertions.
+
 ## [0.2.0] — 2026-10-23
 
 ### Added

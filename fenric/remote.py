@@ -25,7 +25,7 @@ from urllib.parse import unquote, urlsplit
 
 from fenric import backend
 from fenric.chrome import Page
-from fenric.html_bundle import document_policy, valid_member_name
+from fenric.html_bundle import byte_range, document_policy, valid_member_name
 from fenric.serve_guard import stop_group
 from fenric.session import Session
 
@@ -226,6 +226,8 @@ class Transport:
                 content: str = "application/json",
                 *,
                 resource: bool = False,
+                range_size: int | None = None,
+                content_range: str | None = None,
             ) -> None:
                 self.send_response(code)
                 self.send_header("Content-Type", content)
@@ -234,13 +236,20 @@ class Transport:
                 self.send_header("Referrer-Policy", "no-referrer")
                 self.send_header("X-Content-Type-Options", "nosniff")
                 self.send_header("Connection", "close")
+                if range_size is not None:
+                    self.send_header("Accept-Ranges", "bytes")
+                if content_range is not None:
+                    self.send_header("Content-Range", content_range)
                 if resource:
                     self.send_header(
-                        "Content-Security-Policy", document_policy(owner.origin + owner.files_path)
+                        "Content-Security-Policy",
+                        document_policy(owner.origin + owner.files_path, page.bundle),
                     )
                     self.send_header("Access-Control-Allow-Origin", "null")
                 self.end_headers()
-                if resource:
+                if self.command == "HEAD":
+                    pass
+                elif resource:
                     for offset in range(0, len(data), 65536):
                         if owner.session.done.is_set() or owner.session.authority_expired():
                             break
@@ -306,7 +315,52 @@ class Transport:
                         ):
                             raise ValueError
                         resource = page.bundle.resources[name]
-                        self.reply(200, resource.data, resource.content_type, resource=True)
+                        if resource.content_type != "audio/wav":
+                            self.reply(200, resource.data, resource.content_type, resource=True)
+                            return
+                        size = len(resource.data)
+                        ranges = self.headers.get_all("Range")
+                        # No validator is issued for these no-store snapshots. An
+                        # If-Range condition therefore cannot match; send the whole file.
+                        if (
+                            self.command == "GET"
+                            and ranges
+                            and not self.headers.get_all("If-Range")
+                            and all(r.split("=", 1)[0].lower() == "bytes" for r in ranges)
+                            and not any("," in r for r in ranges)
+                        ):
+                            try:
+                                if len(ranges) != 1:
+                                    raise ValueError
+                                start, end = byte_range(
+                                    "bytes=" + ranges[0].partition("=")[2], size
+                                )
+                            except ValueError:
+                                self.reply(
+                                    416,
+                                    b"",
+                                    resource.content_type,
+                                    resource=True,
+                                    range_size=size,
+                                    content_range=f"bytes */{size}",
+                                )
+                                return
+                            self.reply(
+                                206,
+                                resource.data[start : end + 1],
+                                resource.content_type,
+                                resource=True,
+                                range_size=size,
+                                content_range=f"bytes {start}-{end}/{size}",
+                            )
+                        else:
+                            self.reply(
+                                200,
+                                resource.data,
+                                resource.content_type,
+                                resource=True,
+                                range_size=size,
+                            )
                     except (KeyError, ValueError, UnicodeError):
                         self.refuse()
                 elif owner.local:
@@ -318,6 +372,12 @@ class Transport:
                         self.reply(200, page.html.encode(), "text/html; charset=utf-8")
                 elif self.path == owner.path + "/state":
                     self.state_reply()
+                else:
+                    self.refuse()
+
+            def do_HEAD(self) -> None:
+                if owner.files_path and urlsplit(self.path).path.startswith(owner.files_path):
+                    self.do_GET()
                 else:
                     self.refuse()
 

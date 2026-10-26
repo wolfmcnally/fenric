@@ -17,6 +17,45 @@ from fenric.chrome import Page
 from fenric.session import Session
 
 
+def wav_sample() -> bytes:
+    """Synthetic non-silent two-second mono PCM16 WAV, never a song."""
+    import io
+    import math
+    import struct
+    import wave
+
+    frames = bytearray()
+    for index in range(96000):
+        t = index / 48000
+        value = sum(
+            math.sin(2 * math.pi * 440 * (t - start)) * math.exp(-18 * (t - start))
+            for start in (0.0, 0.65, 1.3)
+            if 0 <= t - start < 0.5
+        )
+        frames.extend(struct.pack("<h", round(1600 * value)))
+    stream = io.BytesIO()
+    with wave.open(stream, "wb") as wav:
+        wav.setparams((1, 2, 48000, 0, "NONE", "not compressed"))
+        wav.writeframes(frames)
+    return stream.getvalue()
+
+
+def score_audio_document(score: str, audio: str = "draft.wav") -> str:
+    """Caller-prepared score text and native media controls, not executable score code."""
+    from html import escape
+    from urllib.parse import quote
+
+    return (
+        '<!doctype html><meta name="viewport" content="width=device-width">'
+        "<style>body{font:16px system-ui;margin:16px}audio{max-width:100%}"
+        "pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>"
+        "<h1>Synthetic score/audio test</h1>"
+        '<audio id="audio" controls preload="metadata" '
+        f'src="{escape(quote(audio, safe="/"))}"></audio>'
+        f'<pre id="score">{escape(score)}</pre>'
+    )
+
+
 class ScriptedBackend:
     """A render backend that plays the person's part from a script."""
 

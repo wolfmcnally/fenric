@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
+from threading import Event
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -148,7 +149,9 @@ def open_dialog(browser: Browser, raw: dict[str, Any], *, scheme: str = "light")
         raise
 
 
-def proxy_dialog(route: Route, transport: Transport) -> APIResponse:
+def proxy_dialog(
+    route: Route, transport: Transport, *, removed: Event | None = None
+) -> APIResponse | None:
     """Forward a test HTTPS request through the real authenticated loopback handler."""
     incoming = route.request
     parsed = urlsplit(incoming.url)
@@ -160,9 +163,18 @@ def proxy_dialog(route: Route, transport: Transport) -> APIResponse:
         "X-Forwarded-Proto": "https",
         "Tailscale-User-Login": "owner@example.com",
     }
-    response = route.fetch(
-        url=f"http://127.0.0.1:{transport.server.server_port}" + parsed.path, headers=headers
-    )
+    try:
+        response = route.fetch(
+            url=f"http://127.0.0.1:{transport.server.server_port}" + parsed.path, headers=headers
+        )
+    except Error:
+        # A test-owned listener can disappear after its route callback's check.
+        # Deliver that expected loss to the browser, not as a Python route error.
+        # All failures without explicit removal evidence still fail the test.
+        if removed is None or not removed.is_set():
+            raise
+        route.abort("connectionreset")
+        return None
     route.fulfill(response=response)
     return response
 

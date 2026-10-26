@@ -124,7 +124,7 @@ fenric --version
 It prints the version:
 
 ```text
-fenric 0.2.0
+fenric 0.3.0
 ```
 
 ## Focus and deliberate keyboard responses
@@ -326,6 +326,8 @@ Typing a branch name and a note and pressing OK prints:
 
 For screenshot comments, use `--gallery-file` with the [manifest contract](spec.md#images-and-screenshot-galleries) and [worked example](examples.md#comment-on-screenshots). Image filenames resolve relative to the manifest. Back/Next and review/Edit preserve comments while the page is open, and results retain the manifest's image IDs. The example sets `timeout` to 3600; without it the ordinary hard limit is five minutes even after interaction. Image inspection cancels the visible countdown, not the hard deadline.
 
+Start with the [picture and audio guide](media.md) for screenshot sizing, original/copy provenance and the present → actual protected URL → prompt authorized handoff → same-invocation result → owned cleanup workflow. Gallery feedback never authorizes another operation.
+
 ### secret
 
 Collects one or more credentials in masked fields and hands them to a destination. Prints only `ok`: no value ever reaches Fenric's output, error messages or exit status. Exactly one of `--store` and `--into` is required.
@@ -461,6 +463,10 @@ ok
 | `--height` | Requested frame height, 100 to 2000 pixels; default 420. Guides the initial desktop fit; the frame then follows the resized window. |
 
 Embed unchanged selected HTML with relative navigation and presentation scripts, without compiling a chart or weakening `custom` sanitization. A JSON spec's `files` array is convenient for larger selections. See [the selection and containment contract](spec.md#html). Choose only presentation files; unavailable links remain refused. Embedded interactions never approve anything or extend the deadline.
+
+To show score text beside audio, prepare an HTML document containing an escaped plain-text score in `<pre>` and a native `<audio controls preload="metadata" src="preview.wav"></audio>`, then select both the document and `preview.wav` with `--file`. Escape score text as text (for example, with Python's `html.escape`); never execute it or interpolate it into script. The WAV and score are caller-provided presentation material: Fenric does not compile, synthesize or judge them. Seeking uses single byte ranges over the selected-resource transport; browser decoder support still applies. The existing file and total-size limits remain unchanged.
+
+This WAV extension is introduced in 0.3.0 and is absent from 0.2.0. See the [minimal listening recipe and original tiny demo](media.md#present-selected-wav-audio-beside-text), including exact format/size limits and private link delivery. Do not assume a runtime supports it from its version string alone or ship private recordings as examples.
 
 On desktop, selected HTML windows fit once within the usable display area and can then be resized. The requested height guides that initial fit; the content frame grows or shrinks with the chosen window, scrolling longer documents. Trusted controls remain outside the embedded content, with outer scrolling if needed at a small size. Resizing does not engage an answer or extend the deadline. Other dialog types retain their content-sized windows; configured phone presentation keeps its existing frame-height behavior.
 

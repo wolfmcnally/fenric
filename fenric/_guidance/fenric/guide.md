@@ -12,6 +12,8 @@ Use Fenric to collect the input the work actually needs, present a review, or sh
 | Several substantial questions | Ask spec with `"presentation":"wizard"` | Active answers after final review |
 | A report or acknowledgment | `fenric notify`; sanitized rich material via `custom` | Status only; acknowledgment is not action consent |
 | Literal text to copy | Notify spec with `copy_text` | Status only; Copy itself does not settle the view |
+| Pictures or screenshots with comments | `fenric ask --gallery-file gallery.json` | Comments under stable image IDs |
+| Audio beside caller-prepared text or a score | Selected HTML plus exact WAV files, only on a supporting runtime | Presentation acknowledgment, not musical acceptance |
 | Secret entry | `fenric secret` into an authorized supported destination | Status; never secret values in caller output |
 | An original native permission | An already qualified owning adapter and supported callback | Only its admitted native response contract |
 
@@ -128,6 +130,34 @@ Retrieved 2026-10-22. These sources inform recommendations; the actual installed
 - [OWASP Transaction Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html), undated live guidance: significant transaction details and final execution checks.
 - [W3C Clipboard API working draft, 2026-06-24](https://www.w3.org/TR/2026/WD-clipboard-apis-20260624/): platform-specific clipboard processing, including newline normalization; a draft, not a finished standard.
 - [WAI dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) and [timing guidance](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html), undated live guidance: deliberate interaction, readable content and adequate time. Do not assume every security timeout qualifies for an accessibility exception.
+
+Before running a media invocation, create a fresh owner-only (0700) request directory outside the checkout and set `STATUS_DIR` to its absolute path. Put status files there: they can contain live bearer URLs. Never reuse a status file, symlink or public directory.
+
+To check WAV selection without opening a window or starting remote delivery, create another fresh private directory, set `CHECK_DIR` to its absolute path, and put a minimal `index.html` and empty `probe.wav` inside it. Run `FENRIC_HEADLESS=1 fenric html --root "$CHECK_DIR" --entry index.html --file index.html --file probe.wav`. Exit 4 with exactly `unavailable: headless` means this runtime accepted WAV selection; exit 3 means refusal or invalid input (including unsupported WAV on published 0.2.0). Any other result is unknown: inspect it, do not assume support. This checks selection only, not audio validity, GUI readiness or decoding; it does not create a headless-only presentation route.
+
+## Screenshot and picture galleries
+
+Use the gallery surface for pictures front and center, with optional per-image comments and final review. Give every image a stable ID, a useful name and an honest caption. Preserve simulator-versus-physical capture provenance and visible defects. Prepare this manifest beside two caller-selected static PNGs:
+
+```json
+{"title":"Screenshot review","message":"Feedback only; submission approves no other action.","timeout":3600,"images":[{"id":"portrait","name":"Portrait layout","file":"portrait.png","caption":"Caller-provided portrait capture."},{"id":"wide","name":"Wide layout","file":"wide.png","caption":"Caller-provided wide capture."}]}
+```
+
+Run `fenric ask --gallery-file gallery.json --remote-status-file "$STATUS_DIR/gallery-status.json"`, retaining the process and a fresh private status path. Actual terminal JSON is keyed by image ID, for example `{"portrait":"Enlarge the label.","wide":""}`. Comments remain drafts until final Submit. Back/Next and review/Edit preserve them within the open page; reload, cancellation and expiry discard unsubmitted drafts. Natural size inspection does not remove the hard lifetime.
+
+Bounds: 10 static PNGs, 2 MiB of PNG file bytes each / 8 MiB combined, 8192 pixels per side, 16 million pixels each / 24 million combined; 64 KiB manifest and 1000 UTF-16 units per comment. No SVG, animated PNG or network image URLs. Make a separate aspect-preserving PNG copy if needed, retain originals and hashes, and inspect size/readability. Do not crop or retouch defects. A modest maximum side such as 1100 pixels is a starting point, not a byte-size guarantee. Label resizing and original provenance. `required:false` is optional; blank optional comments return an empty string.
+
+Promptly deliver the real protected URL and caller-owned remaining lifetime through the existing authorized channel, then collect this same invocation's terminal result and owned cleanup. Do not park before handing off the link or create a duplicate gallery. Missing GUI/private delivery is a blocker, not permission to change access. If handoff fails, report it and keep the same invocation through normal termination; use only its supported cancel path if ending early, never clear shared routes or orphan it. See **One invocation, live link, one terminal result** above and the source documentation's `docs/media.md` and `docs/examples.md#comment-on-screenshots` for complete examples.
+
+## Selected WAV audio
+
+Selected-WAV audio requires Fenric 0.3.0 or later; published 0.2.0 does not accept WAV bundles. Development builds may share an older version string; verify the receiving runtime's actual selected-file contract or exact source/package provenance when uncertain. Never silently install or replace it to satisfy a listening request.
+
+On a supporting runtime, prepare HTML with escaped plain text in `<pre>` beside native `<audio controls preload="metadata" src="preview.wav"></audio>`. Select exactly the HTML and its paired WAV using `fenric html --root listening-preview --entry index.html --file index.html --file preview.wav --timeout 900 --remote-status-file "$STATUS_DIR/audio-status.json"`; all paths refer to caller-prepared files. There is no audio verb, music compiler, transcoder or new hosting service. Escape score text as text, never execute it or insert it into script. Retain exact text/audio association and immutable hashes; do not silently substitute a preliminary recording or truncate a long one.
+
+Only WAV is added, served as `audio/wav`; the public demo exercises uncompressed PCM16. Other WAV encodings depend on the receiving browser and require their own decode/playback check; other formats/codecs are not promised. At most eight WAVs with 1024 bytes of combined percent-encoded relative WAV names, within existing 16 MiB/file, 128 MiB total and 4096-file selected-bundle bounds. Only exact selected WAV URLs receive media permission; external/data/blob media remain blocked. Single-byte-range delivery supports seeking over immutable snapshots with existing owner/expiry checks. User-controlled Play/Pause/seek/replay neither settles the view nor extends its deadline. Playback does not count as interaction, so the untouched countdown continues; set the timeout above recording length plus reading time. Do not autoplay or read the user's clipboard. Observable playback is not speaker audibility, musical judgment or action consent.
+
+Collect availability and promptly relay its actual protected link and caller-owned lifetime before waiting; retain the same invocation through result and owned cleanup. Respect unavailable/cancel/expiry without automatic replay. The source archive's `docs/examples/audio-demo/` contains a tiny original MIT chime with a generator and provenance, not a private recording; it is absent from the wheel. The full source recipe is `docs/media.md`. Keep private/large recordings out of repository and release inputs. Do not widen networking, credentials, authentication or permissions to make playback work.
 
 ## Unchanged selected HTML reports
 

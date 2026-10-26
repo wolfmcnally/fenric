@@ -339,6 +339,17 @@ def test_public_api_tutorial_matches_exports_and_runs_without_a_window(
     for language, body in FENCE.findall(guide):
         if language == "json":
             raw = json.loads(body)
+            if "images" in raw:
+                # Gallery manifests have their own public loader, not a verb field.
+                gallery = tmp_path / "agent-gallery"
+                gallery.mkdir()
+                for image, fixture in zip(
+                    raw["images"], ("gallery-first.png", "gallery-second.png"), strict=True
+                ):
+                    shutil.copyfile(DOCS / "examples" / fixture, gallery / image["file"])
+                manifest = gallery / "gallery.json"
+                manifest.write_text(json.dumps(raw))
+                raw = load_gallery(manifest)
             validate_spec(raw)
             specs.append(raw)
         elif language == "bash":

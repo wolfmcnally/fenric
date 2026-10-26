@@ -69,6 +69,11 @@ docs/native-approvals.md
 docs/troubleshooting.md
 docs/commands.md
 docs/examples.md
+docs/media.md
+docs/examples/audio-demo/PROVENANCE.md
+docs/examples/audio-demo/generate.py
+docs/examples/audio-demo/index.html
+docs/examples/audio-demo/tone.wav
 docs/examples/ask.json
 docs/examples/ask-wizard.json
 docs/examples/broken-chart.ts
@@ -197,6 +202,7 @@ tests/test_engine.py
 tests/test_gallery.py
 tests/test_guidance.py
 tests/test_lifecycle.py
+tests/test_media_examples.py
 tests/test_interaction.py
 tests/test_protocol.py
 tests/test_packaging.py

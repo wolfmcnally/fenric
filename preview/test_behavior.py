@@ -23,6 +23,188 @@ from fenric.spec import VERBS
 Open = Callable[..., Dialog]
 
 
+def test_proxy_only_translates_fetch_failure_after_owned_removal() -> None:
+    from threading import Event
+    from types import SimpleNamespace
+
+    from playwright.sync_api import Error
+
+    calls = []
+    transport = SimpleNamespace(authority="fixture.invalid", server=SimpleNamespace(server_port=1))
+
+    class Route:
+        request = SimpleNamespace(url="https://fixture.invalid/action", headers={})
+
+        def fetch(self, **kwargs):
+            raise Error("synthetic fetch failure")
+
+        def abort(self, reason):
+            calls.append(reason)
+
+    removed = Event()
+    for proof in (None, removed):
+        with pytest.raises(Error, match="synthetic fetch failure"):
+            proxy_dialog(Route(), transport, removed=proof)
+    assert calls == []
+    removed.set()
+    assert proxy_dialog(Route(), transport, removed=removed) is None
+    assert calls == ["connectionreset"]
+
+    class FulfillFailure(Route):
+        def fetch(self, **kwargs):
+            return object()
+
+        def fulfill(self, **kwargs):
+            raise Error("synthetic fulfill failure")
+
+    with pytest.raises(Error, match="synthetic fulfill failure"):
+        proxy_dialog(FulfillFailure(), transport, removed=removed)
+    assert calls == ["connectionreset"]
+
+
+@pytest.mark.parametrize("remote_surface", [False, True])
+def test_selected_wav_decodes_plays_pauses_seeks_ends_and_errors(
+    browser: Browser, tmp_path: Path, remote_surface: bool
+) -> None:
+    import secrets
+    import time
+
+    from fenric.html_bundle import load_bundle
+    from fenric.remote import Transport
+    from fenric.session import Session
+    from fenric.spec import validate_spec
+    from tests.support import score_audio_document, wav_sample
+
+    score = '\\version "2.24.4"\n{ c\'4 d\' e\' }\n</pre><script>throw Error("bad")</script>'
+    (tmp_path / "index.html").write_text(score_audio_document(score))
+    (tmp_path / "draft.wav").write_bytes(wav_sample())
+    (tmp_path / "space ü.wav").write_bytes(wav_sample())
+    (tmp_path / "broken.wav").write_bytes(b"not a WAV")
+    raw = {
+        "verb": "html",
+        "root": str(tmp_path),
+        "entry": "index.html",
+        "files": ["index.html", "draft.wav", "broken.wav", "space ü.wav"],
+        "timeout": 60,
+    }
+    session = None
+    transport = None
+    dialog = None
+    context = None
+    try:
+        if remote_surface:
+            spec = validate_spec(raw)
+            bundle = load_bundle(str(tmp_path), "index.html", raw["files"])
+            token = secrets.token_urlsafe(32)
+            built = build_page(
+                spec,
+                remote=True,
+                bundle=bundle,
+                file_token=token,
+                frame_url=f"/{token}/files/index.html",
+            )
+            session = Session(60, lambda p: None, lambda v: "ok")
+            transport = Transport(built, session, "fixture.invalid:8443", "owner@example.com")
+            context = browser.new_context(viewport={"width": 390, "height": 800})
+            context.route(
+                "https://fixture.invalid:8443/**", lambda route: proxy_dialog(route, transport)
+            )
+            page = context.new_page()
+            page.goto(transport.origin + transport.path)
+        else:
+            dialog = open_dialog(browser, raw)
+            page = dialog.page
+            page.clock.resume()
+        frame = page.frame_locator("#fenric-html")
+        expect(frame.locator("#score")).to_have_text(score)
+        assert frame.locator("script").count() == 0
+        audio = frame.locator("audio")
+        assert audio.evaluate("e => e.controls") is True
+        decoded = audio.evaluate("""async e => {
+            const r = await fetch(e.src); const raw = await r.arrayBuffer();
+            const c = new (window.AudioContext || window.webkitAudioContext)();
+            try { const b = await c.decodeAudioData(raw); const data = b.getChannelData(0);
+              let peak=0; for (const x of data) { if(!Number.isFinite(x)) throw Error('nonfinite');
+                peak=Math.max(peak,Math.abs(x)); }
+              return {duration:b.duration,channels:b.numberOfChannels,peak};
+            } finally { await c.close(); }
+        }""")
+        assert abs(decoded["duration"] - 2) < 0.02
+        assert decoded["channels"] == 1 and decoded["peak"] > 0.001
+
+        def wait(predicate):
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline:
+                if predicate():
+                    return
+                page.wait_for_timeout(40)
+            assert predicate(), "media observation did not occur"
+
+        audio.evaluate("e => e.play()")
+        wait(lambda: audio.evaluate("e => !e.paused && e.currentTime > .1"))
+        audio.evaluate("e => e.pause()")
+        wait(lambda: audio.evaluate("e => e.paused"))
+        # The media clock settles to the decoded playback position after pause.
+        page.wait_for_timeout(180)
+        stopped = audio.evaluate("e => e.currentTime")
+        page.wait_for_timeout(180)
+        assert abs(audio.evaluate("e => e.currentTime") - stopped) < 0.08
+        audio.evaluate("e => {e.currentTime=.9}")
+        wait(lambda: audio.evaluate("e => !e.seeking && Math.abs(e.currentTime-.9)<.1"))
+        audio.evaluate("e => e.play()")
+        wait(lambda: audio.evaluate("e => e.currentTime > 1.05 && !e.paused"))
+        audio.evaluate("e => {e.currentTime=1.85}")
+        wait(lambda: audio.evaluate("e => e.ended"))
+        # Repeated play and reopening the same selected source do not settle the dialog.
+        for _ in range(2):
+            audio.evaluate("e => {e.currentTime=0; return e.play()}")
+            wait(lambda: audio.evaluate("e => e.currentTime>.05 && !e.paused"))
+            audio.evaluate("e => e.pause()")
+        audio.evaluate("e => {e.src='broken.wav';e.load()}")
+        wait(lambda: audio.evaluate("e => e.error !== null"))
+        outside = []
+        page.context.route(
+            "https://outside.invalid/**",
+            lambda route: (outside.append(route.request.url), route.abort()),
+        )
+        audio.evaluate("e => {e.src='https://outside.invalid/foreign.wav';e.load()}")
+        wait(lambda: audio.evaluate("e => e.error !== null"))
+        assert outside == []
+        # Valid WAV bytes cannot be played through data/blob or unselected URLs.
+        for source in ("data", "blob", "unselected.wav"):
+            audio.evaluate(
+                """async (e,source) => {
+                const b=await (await fetch('draft.wav')).blob();
+                if(source==='data') {const reader=new FileReader();
+                    e.src=await new Promise(resolve=>{
+                        reader.onload=()=>resolve(reader.result);reader.readAsDataURL(b)});}
+                else if(source==='blob') e.src=URL.createObjectURL(b);
+                else e.src=source;
+                e.load();
+            }""",
+                source,
+            )
+            wait(lambda: audio.evaluate("e => e.error !== null"))
+        audio.evaluate("e => {e.src='space %C3%BC.wav';e.load();return e.play()}")
+        wait(lambda: audio.evaluate("e => e.currentTime>.05 && !e.paused"))
+        audio.evaluate("e => e.pause()")
+        audio.evaluate("e => {e.src='draft.wav';e.load()}")
+        audio.evaluate("e => e.play()")
+        wait(lambda: audio.evaluate("e => e.currentTime>.05 && !e.paused"))
+        audio.evaluate("e => e.pause()")
+        assert page.evaluate("window.fenric.done") is None
+        assert not page.evaluate("window.fenric.touched")
+    finally:
+        if dialog:
+            dialog.close()
+        if context:
+            close_proxy_context(context)
+        if transport:
+            transport.close()
+        if session:
+            session.close()
+
+
 @pytest.fixture
 def open_(browser: Browser) -> Iterator[Open]:
     opened: list[Dialog] = []
@@ -650,7 +832,10 @@ def test_only_control_interaction_cancels_the_ring(open_: Open, activity: str) -
     assert page.get_by_role("img", name="Timeout canceled").is_visible()
 
 
-def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, tmp_path) -> None:
+@pytest.mark.parametrize("teardown_race", [False, True])
+def test_phone_remote_page_shares_clock_and_real_interaction(
+    browser: Browser, tmp_path, teardown_race: bool
+) -> None:
     """Actual shipped phone script through the authenticated production HTTP handler."""
     from fenric.chrome import build_page
     from fenric.engine import prepare_destination
@@ -757,6 +942,7 @@ def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, t
         failing = False
         failure_limit = 2
         removed = Event()
+        forwarding = Event()
         teardown = None
 
         def connection(route):
@@ -806,6 +992,8 @@ def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, t
                         nonlocal teardown
 
                         def close_after_settlement():
+                            if teardown_race:
+                                forwarding.wait(timeout=3)
                             removed.set()
                             transport.close()
 
@@ -813,7 +1001,13 @@ def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, t
                         teardown.start()
                     route.abort("connectionreset")
                     return
-            proxy_dialog(route, transport)
+            if scenario == "lost-ack-teardown" and teardown_race and counts["submits"] >= 2:
+                # Deterministically cross the old removed-check/fetch race.
+                assert not removed.is_set() and teardown is not None
+                forwarding.set()
+                teardown.join(timeout=2)
+                assert removed.is_set() and not teardown.is_alive()
+            proxy_dialog(route, transport, removed=removed)
 
         context.route("**/*", connection)
         try:
@@ -854,6 +1048,7 @@ def test_phone_remote_page_shares_clock_and_real_interaction(browser: Browser, t
                         "Any response is unconfirmed.",
                     }
                     assert session.status == "ok" and len(effects) == 1
+                    assert not teardown_race or forwarding.is_set()
                 else:
                     page.get_by_role("heading", name=heading, exact=True).wait_for(timeout=4000)
                 before = dict(counts)

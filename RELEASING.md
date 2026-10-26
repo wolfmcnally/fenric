@@ -61,3 +61,8 @@ For an approved cached-only qualification, add `--offline`, the existing qualifi
 - [ ] At explicit publication authorization, make the actual release date the final source edit in `CHANGELOG.md`, rerun affected checks and rebuild/re-hash both archives from that exact tree. Verify the resulting release commit matches the checked tree. Publish only that approved history, tag that dated release commit as `v<version>`, and attach only its newly verified archives. Preparation artifacts marked unreleased are not upload-ready. A changed repository target/layout also requires correcting metadata URLs and rebuilding.
 - [ ] PyPI publication is optional and separate. Confirm namespace ownership, credentials and artifact identity before any upload; no registry publication is implied by a GitHub release.
 - [ ] After publication, add a new `[Unreleased]` section through the normal checked source workflow. Preserve the final candidate receipts and rollback artifacts.
+
+## Media guidance release alignment
+
+- [ ] Before releasing selected-WAV support, choose the next version under this checklist, update every unreleased/source-only statement in README, docs/media.md, docs/commands.md and the packaged agent guide to the actual release capability, and regenerate version-bound captures. Never upload a development wheel under the already-published 0.2.0 identity.
+- [ ] Retain only the tiny original docs/examples/audio-demo/tone.wav as source-archive demo audio; no audio in the wheel. Re-run the package media allowlist/exclusion and reproducible-demo checks. Keep private recordings and evidence outside publication inputs.

@@ -441,6 +441,162 @@ def test_http_refuses_foreign_and_malformed_requests(capfd, monkeypatch, tmp_pat
         session.close()
 
 
+@pytest.mark.parametrize("local", [False, True])
+def test_selected_wav_ranges_are_exact_private_and_invocation_scoped(tmp_path, local):
+    from fenric.html_bundle import load_bundle
+
+    from .support import score_audio_document, wav_sample
+
+    wav = wav_sample()
+    score = "\\version \"2.24.4\"\n{ c'4 d' e' }\n</pre><script>bad()</script>"
+    original = score_audio_document(score)
+    (tmp_path / "index.html").write_text(original)
+    (tmp_path / "draft.wav").write_bytes(wav)
+    (tmp_path / "other.wav").write_bytes(b"unselected")
+    bundle = load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
+    (tmp_path / "draft.wav").write_bytes(b"changed after snapshot")
+    spec = validate_spec(
+        {
+            "verb": "html",
+            "root": str(tmp_path),
+            "entry": "index.html",
+            "files": ["index.html", "draft.wav"],
+        }
+    )
+    page = build_page(spec, bundle=bundle, file_token="audio-capability")
+    session = Session(60, lambda p: p, lambda v: "ok")
+    transport = remote.Transport(page, session, HOST + ":8443", LOGIN, local=local)
+    base = [("Host", transport.authority)]
+    if not local:
+        base += [
+            ("X-Forwarded-Host", transport.authority),
+            ("X-Forwarded-Proto", "https"),
+            ("Tailscale-User-Login", LOGIN),
+        ]
+    path = transport.files_path + "draft.wav"
+    try:
+        status, data, headers = request(transport, path=path, headers=base)
+        assert (status, data) == (200, wav)
+        assert headers["Content-Type"] == "audio/wav"
+        assert headers["Content-Length"] == str(len(wav))
+        assert headers["Accept-Ranges"] == "bytes"
+        assert (
+            headers["Cache-Control"] == "no-store"
+            and headers["X-Content-Type-Options"] == "nosniff"
+        )
+        assert "media-src " + transport.origin + path + ";" in headers["Content-Security-Policy"]
+        assert (
+            "blob:" not in headers["Content-Security-Policy"].split("media-src ")[1].split(";")[0]
+        )
+        for value, start, end in [
+            ("bytes=0-1", 0, 1),
+            ("Bytes=0-1", 0, 1),
+            ("bytes=44-99", 44, 99),
+            ("bytes=44-", 44, len(wav) - 1),
+            ("bytes=-16", len(wav) - 16, len(wav) - 1),
+            ("bytes=0-99999999", 0, len(wav) - 1),
+        ]:
+            code, part, fields = request(transport, path=path, headers=base + [("Range", value)])
+            assert code == 206 and part == wav[start : end + 1]
+            assert fields["Content-Range"] == f"bytes {start}-{end}/{len(wav)}"
+            assert int(fields["Content-Length"]) == len(part)
+        for value in [
+            "bytes",
+            "bytes=99999999-",
+            "bytes=7-2",
+            "bytes=-0",
+            "bytes=",
+            "bytes=+1-2",
+            "bytes=²-³",
+            "bytes=" + "1" * 129 + "-",
+        ]:
+            code, part, fields = request(transport, path=path, headers=base + [("Range", value)])
+            assert code == 416 and part == b""
+            assert fields["Content-Range"] == f"bytes */{len(wav)}"
+        assert (
+            request(
+                transport,
+                path=path,
+                headers=base + [("Range", "bytes=0-1"), ("Range", "bytes=2-3")],
+            )[0]
+            == 416
+        )
+        assert request(
+            transport, path=path, headers=base + [("Range", "bytes=0-1"), ("If-Range", '"stale"')]
+        )[:2] == (200, wav)
+        code, part, fields = request(
+            transport, path=path, method="HEAD", headers=base + [("Range", "bytes=0-1")]
+        )
+        assert code == 200 and part == b"" and fields["Content-Length"] == str(len(wav))
+        for ignored in ("items=0-1", "bytes=0-1,3-4"):
+            assert request(transport, path=path, headers=base + [("Range", ignored)])[:2] == (
+                200,
+                wav,
+            )
+        assert request(transport, path=transport.files_path + "other.wav", headers=base)[0] == 403
+        assert (
+            request(transport, path=transport.files_path + "%2e%2e/draft.wav", headers=base)[0]
+            == 403
+        )
+        assert request(transport, path="/other-capability/files/draft.wav", headers=base)[0] == 403
+        assert request(transport, path=path, headers=[("Host", "wrong")])[0] == 403
+        if not local:
+            wrong = [
+                (k, "foreign@example.com" if k == "Tailscale-User-Login" else v) for k, v in base
+            ]
+            assert request(transport, path=path, headers=wrong)[0] == 403
+        assert not session.state()["touched"]
+        session.settle(backend.Outcome(backend.CANCELLED))
+        assert request(transport, path=path, headers=base + [("Range", "bytes=0-1")])[0] == 403
+    finally:
+        transport.close()
+        session.close()
+
+
+def test_wav_selection_keeps_other_media_and_custom_policy_unchanged(tmp_path, monkeypatch):
+    from fenric import html_bundle
+    from fenric.sanitize import sanitize_html
+
+    from .support import wav_sample
+
+    with pytest.raises(ValueError):
+        html_bundle.byte_range("bytes=١-٢", 100)
+
+    (tmp_path / "index.html").write_text("<h1>Selected</h1>")
+    (tmp_path / "draft.wav").write_bytes(wav_sample())
+    bundle = html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
+    assert bundle.resources["draft.wav"].content_type == "audio/wav"
+    assert "media-src 'none'" in html_bundle.document_policy("http://127.0.0.1/token/files/")
+    assert sanitize_html('<audio controls src="x.wav"></audio><p>Safe</p>') == "<p>Safe</p>"
+    for name in ("other.mp3", "other.flac", "../draft.wav", "link.wav"):
+        if name == "link.wav":
+            (tmp_path / name).symlink_to(tmp_path / "draft.wav")
+        with pytest.raises(html_bundle.HtmlError):
+            html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", name])
+    hostile = "a b;connect-src *.wav"
+    (tmp_path / hostile).write_bytes(b"wav")
+    bundle = html_bundle.load_bundle(
+        str(tmp_path), "index.html", ["index.html", "draft.wav", hostile]
+    )
+    policy = html_bundle.document_policy("http://127.0.0.1/token/files/", bundle)
+    assert "a%20b%3Bconnect-src%20%2A.wav" in policy
+    media = policy.split("media-src ")[1].split(";")[0]
+    assert "draft.wav" in media and ";" not in media and "*" not in media
+    for index in range(9):
+        (tmp_path / f"{index}.wav").write_bytes(b"wav")
+    with pytest.raises(html_bundle.HtmlError, match="media policy"):
+        html_bundle.load_bundle(
+            str(tmp_path), "index.html", ["index.html"] + [f"{i}.wav" for i in range(9)]
+        )
+    monkeypatch.setattr(html_bundle, "MAX_WAV_NAME_BYTES", 5)
+    with pytest.raises(html_bundle.HtmlError, match="media policy"):
+        html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
+    monkeypatch.setattr(html_bundle, "MAX_WAV_NAME_BYTES", 1024)
+    monkeypatch.setattr(html_bundle, "MAX_FILE_BYTES", 16)
+    with pytest.raises(html_bundle.HtmlError):
+        html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
+
+
 def test_remote_desktop_race_stores_once_and_replays(tailnet, tmp_path, capfd):
     sink = tmp_path / "sink"
     command = tmp_path / "store.py"

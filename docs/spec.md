@@ -197,6 +197,8 @@ Changing a choice immediately clears any question it hides, including dependent 
 
 Drafts last for the current open page only. Reloading or opening another surface starts fresh; drafts are not shared between surfaces. The first surface to submit settles the request. No choice executes an approval or other action.
 
+Start with the [picture gallery recipe](media.md#present-a-png-gallery) for sizing, provenance and prompt private-link/result handling.
+
 ### secret
 
 | Field | Type | Meaning |
@@ -428,11 +430,15 @@ Result: the status `ok`. What survives sanitizing is described in the [security 
 
 Result: the status `ok`, meaning presentation acknowledged, never approval of an embedded action. Selected files are snapshotted before opening and served byte-for-byte, without rewriting or sanitizing their contents. Use `custom` for sanitized inert markup instead. Relative links, scripts, styles and fetches work only within the selected bundle; every navigable document retains the same opaque sandbox and source policy. Unselected links are refused, not silently copied. Inline script/style and selected scripts may render presentation content, but cannot access the parent, native Python bridge, arbitrary filesystem, external network, forms, popups, nested frames or workers. Browser storage and unsafe-eval are not enabled. Data/blob images and fonts are allowed.
 
-Limits: 4096 unique files, 16 MiB per file and 128 MiB total. Supported extensions are HTML/HTM, CSS, JS, JSON, SVG, PNG, JPG/JPEG, GIF, WebP, WOFF and WOFF2; textual files must be UTF-8. Paths are exact POSIX relative names: no absolute paths, empty/dot/dot-dot components, symlinks in the selected path, query/fragment names, backslashes, nonregular files or unsupported file types. A changing or unreadable selection is refused before any window. The caller must exclude secrets, raw transcripts and unrelated material; an extension is not a content audit.
+Limits: 4096 unique files, 16 MiB per file and 128 MiB total. Supported extensions are HTML/HTM, CSS, JS, JSON, SVG, PNG, JPG/JPEG, GIF, WebP, WOFF, WOFF2 and WAV; textual files must be UTF-8. Paths are exact POSIX relative names: no absolute paths, empty/dot/dot-dot components, symlinks in the selected path, query/fragment names, backslashes, nonregular files or unsupported file types. A changing or unreadable selection is refused before any window. The caller must exclude secrets, raw transcripts and unrelated material; an extension is not a content audit.
 
 Frame activity does not report touch or extend the original deadline. Use an explicit `timeout` up to 3600 for a long review; default hard lifetime remains five minutes. Desktop uses a temporary assets-only loopback capability; phone delivery additionally uses the existing authenticated private surface. Both are owned and closed by the same invocation. There is no headless-only renderer or new remote configuration.
 
+Selected WAV files use `audio/wav` and may be referenced by native `<audio controls>` elements in the selected HTML. At most eight WAV files with 1024 bytes of combined percent-encoded relative names may be selected, bounding the media policy header. The media policy allows only the exact selected WAV URLs for that invocation, not external, data or blob media. Playback support depends on the receiving browser's WAV decoder; selecting a file does not validate its encoding or musical contents. The immutable byte snapshot supports one ASCII byte range per request (including open-ended and suffix ranges), returning 206 or 416 as appropriate, and HEAD without a body. A request with If-Range receives the full snapshot because no validator is issued. Other selected resources retain their existing full-response behavior. Playback, pause and seeking neither settle the outer dialog nor extend its deadline.
+
 Native HTML windows fit once using the requested frame height plus trusted chrome, bounded to the current display's usable area. They then permit resizing, with a 360 by 320 pixel outer-window user-resize minimum; a smaller display takes precedence over that minimum during fitting. The content frame adapts to the chosen viewport and scrolls internally, while trusted controls remain outside it and can be reached by outer scrolling when necessary. Later layout measurements never reset a person's chosen HTML window size. The configured remote page retains its requested frame height. Resizing is not an answer, touch or deadline extension.
+
+The [audio recipe and tiny original demo](media.md#present-selected-wav-audio-beside-text) distinguish the selected-WAV capability introduced in 0.3.0 from published 0.2.0 and cover private-link ownership and playback lifetime.
 
 ### chart
 

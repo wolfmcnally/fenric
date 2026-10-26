@@ -10,6 +10,8 @@ Multiline text fields grow and shrink with wrapped input up to ten visible lines
 
 Review a [paged gallery of screenshots](docs/examples.md#comment-on-screenshots) with retained per-image comments and a final review. The caller supplies local PNGs and stable IDs; `fenric ask --gallery-file manifest.json` returns comments under those IDs.
 
+**Show pictures and let people listen.** Start with the [gallery and audio recipes](docs/media.md): sized PNG screenshots, per-image feedback, and caller-selected WAV playback beside text or a score. Galleries work in released 0.2.0. WAV playback requires 0.3.0 or later; the published 0.2.0 wheel does not include it. Check the receiving runtime before choosing it. A tiny original chime demonstrates the audio path without private recordings or large files. Agents can find the same workflow through `fenric guidance read`.
+
 The separate [request-bound host integration](docs/integration.md) adds a private admitted response channel while preserving standalone use. Its account observations, secret effects and host-reported delivery remain separate; live native adapters and protected coordinator relay require their own qualification.
 
 ## Install
@@ -25,7 +27,7 @@ uv tool install .
 or from a built wheel:
 
 ```bash
-uv tool install fenric-0.2.0-py3-none-any.whl
+uv tool install fenric-0.3.0-py3-none-any.whl
 ```
 
 or with [pipx](https://pipx.pypa.io/):
@@ -119,6 +121,8 @@ After operator setup with `fenric remote setup`, supported dialogs open on deskt
 Fenric reports one early URL or fixed unavailable reason on stderr. Use `--remote-status-file` or the library `remote_status` callback to obtain it programmatically; stdout keeps its single result. The optional announcement command receives the URL after a short grace unless the dialog has already been touched or settled. `--desktop-only` disables remote for one request. No call or spec can enable it. See [remote setup and lifecycle](docs/commands.md#remote-access).
 
 ## Documentation
+
+- [Picture galleries and audio previews](docs/media.md): minimal recipes, image sizing, original tiny chime and private-link/result ownership; WAV support is not in released 0.2.0.
 
 - [Agent interaction guide](fenric/_guidance/fenric/guide.md): choosing a surface, approve/decline with comments, live-link handoff and truthful results. `fenric guidance read` prints this installed guide without setup; `fenric guidance read --skill` prints its optional skill entry point. Neither command installs instructions or changes permissions.
 - [Python API and tutorial](docs/api.md): public functions, results and isolated example boundaries.

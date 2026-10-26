@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import os
+import re
 import stat
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
+from urllib.parse import quote
 
 MAX_FILES = 4096
+MAX_WAV_FILES = 8
+MAX_WAV_NAME_BYTES = 1024
 MAX_FILE_BYTES = 16 * 1024 * 1024
 MAX_TOTAL_BYTES = 128 * 1024 * 1024
 _TYPES = {
@@ -26,6 +30,7 @@ _TYPES = {
     ".webp": "image/webp",
     ".woff": "font/woff",
     ".woff2": "font/woff2",
+    ".wav": "audio/wav",
 }
 
 
@@ -115,6 +120,13 @@ def load_bundle(root: str, entry: str, files: list[str]) -> HtmlBundle:
         or not all(valid_member_name(name) for name in files)
     ):
         raise HtmlError("HTML bundle selection is invalid")
+    wav_names = [name for name in files if Path(name).suffix.lower() == ".wav"]
+    if (
+        len(wav_names) > MAX_WAV_FILES
+        or sum(len(quote(name, safe="/").encode("ascii")) for name in wav_names)
+        > MAX_WAV_NAME_BYTES
+    ):
+        raise HtmlError("HTML bundle exceeds its media policy limit")
     resources: dict[str, Resource] = {}
     try:
         selected_root = Path(root).resolve(strict=True)
@@ -139,12 +151,38 @@ def load_bundle(root: str, entry: str, files: list[str]) -> HtmlBundle:
     return HtmlBundle(entry, MappingProxyType(resources))
 
 
-def document_policy(prefix: str) -> str:
+def byte_range(value: str, size: int) -> tuple[int, int]:
+    """One bounded ASCII byte range over an immutable selected resource."""
+    if len(value) > 128 or not re.fullmatch(r"bytes=(?:[0-9]+-[0-9]*|-[0-9]+)", value):
+        raise ValueError("unsupported range")
+    first, last = value[6:].split("-", 1)
+    if not first:
+        count = int(last)
+        if not count:
+            raise ValueError("unsatisfiable range")
+        start, end = max(0, size - count), size - 1
+    else:
+        start, end = int(first), int(last) if last else size - 1
+    if size <= 0 or start >= size or end < start:
+        raise ValueError("unsatisfiable range")
+    return start, min(end, size - 1)
+
+
+def document_policy(prefix: str, bundle: HtmlBundle | None = None) -> str:
     """Every navigable selected document has the same explicit source boundary."""
+    media = (
+        " ".join(
+            prefix + quote(name, safe="/")
+            for name, resource in (bundle.resources.items() if bundle else ())
+            if resource.content_type == "audio/wav"
+        )
+        or "'none'"
+    )
     return (
         f"default-src 'none'; script-src {prefix} 'unsafe-inline'; "
         f"style-src {prefix} 'unsafe-inline'; img-src {prefix} data: blob:; "
         f"font-src {prefix} data: blob:; connect-src {prefix}; "
+        f"media-src {media}; "
         "base-uri 'none'; form-action 'none'; object-src 'none'; "
         "frame-src 'none'; worker-src 'none'; sandbox allow-scripts"
     )
