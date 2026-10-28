@@ -27,7 +27,7 @@ uv tool install .
 or from a built wheel:
 
 ```bash
-uv tool install fenric-0.3.0-py3-none-any.whl
+uv tool install fenric-0.4.0.dev0-py3-none-any.whl
 ```
 
 or with [pipx](https://pipx.pypa.io/):

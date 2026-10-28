@@ -35,10 +35,10 @@ def _vectors() -> list[dict]:
 
 def test_canonical_wire_vectors() -> None:
     assert hashlib.sha256(SCHEMA.read_bytes()).hexdigest() == (
-        "36760678e37a257bdd87768a4bbdd2901dd210856429565c0ef3fa1200c2a82a"
+        "583014fc7a5353a9bed20c9b4f2c459d17fb16e683fb6ea290d6b355414f6cec"
     )
     assert hashlib.sha256(VECTORS.read_bytes()).hexdigest() == (
-        "22a2ee8c992dd4e644aa22ea0017527288b0adaff661d10ba0956f85c7501213"
+        "17d05ca8e7aa703f59dcb5b43a5fd574c99334840532cdccd3c806d4c953542f"
     )
     for vector in _vectors():
         expected = bytes.fromhex(vector["canonical_utf8_hex"])

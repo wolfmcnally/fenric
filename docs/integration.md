@@ -1,5 +1,7 @@
 # Request-bound host integration
 
+For the opt-in synchronous local/coordinator default-mode Bash adapter and its explicit activation/auto-mode limits, see [native permission host](permission-host.md). Code deployment is not hook activation.
+
 Standalone `fenric` commands and `fenric.run` remain ordinary query/response tools. They need no authority broker. Their validated results do not by themselves prove operator origin or resolve a native harness permission request.
 
 `fenric.run_integrated(channel, backend=None, cancel=None)` consumes one connected, host-admitted Unix stream socket. The requesting host owns the original question/action, private endpoint bootstrap, current operator policy and native callback. The questioning worker invokes Fenric; an optional coordinator may relay a protected operator URL or answer under separate delegated authority. A coordinator is never a gate for a direct operator answer. A caller-created socket, command flag, copied message, model signature or prose claim does not acquire an existing host's native approval authority.

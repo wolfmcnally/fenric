@@ -360,6 +360,7 @@ def run_integrated(
     *,
     backend: backends.Backend | None = None,
     cancel: threading.Event | None = None,
+    desktop_only: bool = False,
 ) -> IntegratedResult:
     """Consume one admitted Unix stream connection, never ordinary stdout.
 
@@ -383,6 +384,7 @@ def run_integrated(
             prepared.message["context"]["presentation"]["spec"],
             backend=backend,
             cancel=cancel,
+            desktop_only=desktop_only,
             _interaction=interaction,
         )
         return interaction.finish(result)

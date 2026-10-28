@@ -1,5 +1,7 @@
 # Native approval integration walkthrough
 
+For the opt-in synchronous local/coordinator default-mode Bash adapter and its explicit activation/auto-mode limits, see [native permission host](permission-host.md). Code deployment is not hook activation.
+
 Fenric is a standalone dialog tool and an independently usable request-bound renderer. It neither installs nor requires another approval product. This guide describes existing interfaces and a host integration transaction; it is not a turn-key native host, hook installer, credential broker or production admission factory. See [Python API](api.md), [exact wire/mappings](integration.md) and [security](security.md).
 
 ## First distinguish the question

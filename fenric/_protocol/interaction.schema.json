@@ -38,6 +38,7 @@
           "enum": [
             "claude.question",
             "claude.approval",
+            "claude.permission",
             "codex.question",
             "codex.command",
             "codex.file",
@@ -195,8 +196,15 @@
           "minLength": 1
         },
         "participant": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "session": {
           "type": "string",

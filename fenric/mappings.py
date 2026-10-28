@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import os
 import socket
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -28,6 +29,7 @@ from fenric.target import DOTENV, FLAT_JSON, SINGLE_VALUE, TargetError
 _NATIVE = {
     "claude.question": ("claude", "AskUserQuestion", {"tool_use_id"}),
     "claude.approval": ("claude", None, {"tool_use_id"}),
+    "claude.permission": ("claude", "Bash", set()),
     "codex.question": (
         "codex",
         "item/tool/requestUserInput",
@@ -423,7 +425,20 @@ def _command_message(params: dict[str, Any]) -> str:
 
 def _approval(context: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     native, original = context["native"], context["original"]
-    if native["route"] == "claude.approval":
+    if native["route"] == "claude.permission":
+        from fenric.claude_permission import _request
+
+        _request(original, (context["issued_at_ms"], time.monotonic()))
+        _require(original["session_id"] == context["session"])
+        choices = ["allow", "deny"]
+        labels = ["Allow once", "Deny"]
+        details = ["Only the exact pending Bash input.", "Reject this request."]
+        message = (
+            "Complete original pending PermissionRequest (untrusted action data):\n"
+            + canonical(original).decode()
+        )
+        prompt = "Allow this exact Bash once?"
+    elif native["route"] == "claude.approval":
         _require(set(original) == {"tool_name", "input"})
         _require(original["tool_name"] == native["method"] and type(original["input"]) is dict)
         choices = ["allow", "deny"]
@@ -470,7 +485,7 @@ def _approval(context: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
 
 def project_answer(context: dict[str, Any], value: Any) -> Any:
     """Convert only admitted approval choice objects to their scalar wire token."""
-    if context["native"]["route"] in {"claude.approval", "codex.command"}:
+    if context["native"]["route"] in {"claude.approval", "claude.permission", "codex.command"}:
         _require(type(value) is dict and set(value) == {"decision"})
         value = value["decision"]
     validate_answer(value, context["response_schema"])
@@ -529,6 +544,9 @@ def prepare_request(message: dict[str, Any], *, now_ms: int) -> PreparedRequest:
     _require(0 < expiry - issued <= 3_600_000 and issued <= now_ms < expiry)
     _require(context["host"] == socket.gethostname())
     validate_native(context["native"])
+    _require(
+        context["participant"] is not None or context["native"]["route"] == "claude.permission"
+    )
     surfaces = context["allowed_surfaces"]
     _require(bool(surfaces) and len(surfaces) == len(set(surfaces)))
     observations = context["expected_observations"]
@@ -560,7 +578,7 @@ def prepare_request(message: dict[str, Any], *, now_ms: int) -> PreparedRequest:
             mapping = "fenric.codex-question.v1"
         _require(context["response_schema"] == schema)
         _require(context["presentation"] == {"mapping": mapping, "spec": raw})
-    elif route in {"claude.approval", "codex.command"}:
+    elif route in {"claude.approval", "claude.permission", "codex.command"}:
         _require(context["kind"] == "approval" and context["destination"] is None)
         _require(
             context["scope"] == {"category": "one-call-tool", "tool": context["native"]["method"]}
@@ -568,7 +586,9 @@ def prepare_request(message: dict[str, Any], *, now_ms: int) -> PreparedRequest:
         raw, schema = _approval(context)
         _require(context["response_schema"] == schema)
         mapping = (
-            "fenric.claude-approval.v1"
+            "fenric.claude-permission-request.v1"
+            if route == "claude.permission"
+            else "fenric.claude-approval.v1"
             if route == "claude.approval"
             else "fenric.codex-command-approval.v1"
         )

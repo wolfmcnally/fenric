@@ -4,7 +4,10 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+
+- A synchronous caller-owned native permission adapter with local account admission or URL-only delivery to a currently verified bounded Folded coordinator. Complete native action/context, direct response channel, principal policy, expiry and one settlement remain bound. No hook is installed or activated by package deployment.
+- An explicit default-mode Bash PermissionRequest mapping without fabricated native tool IDs, fail-closed JSON denial, and a bounded interaction lifetime below the native hook timeout. Existing auto-mode CLI classifier denials are not overridden; live SDK integration remains separate.
 
 ## [0.3.0] — 2026-10-26
 

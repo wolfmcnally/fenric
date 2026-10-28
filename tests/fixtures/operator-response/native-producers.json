@@ -932,5 +932,126 @@
         }
       }
     ]
+  },
+  {
+    "evidence": "synthetic synchronous PermissionRequest counterpart; no live native callback or activation",
+    "request": {
+      "type": "request",
+      "context": {
+        "protocol": "fenric.operator-response.v1",
+        "interaction_id": "fixture-permission-request",
+        "audience": "fixture-host-adapter",
+        "host": "fixture-node",
+        "environment": "native-permission-hook",
+        "project": "sample",
+        "participant": null,
+        "session": "original-native-session",
+        "native": {
+          "request_id": null,
+          "thread_id": null,
+          "turn_id": null,
+          "item_id": null,
+          "tool_use_id": null,
+          "approval_id": null,
+          "started_at_ms": null,
+          "agent_id": null,
+          "harness": "claude",
+          "route": "claude.permission",
+          "method": "Bash"
+        },
+        "kind": "approval",
+        "original": {
+          "cwd": "/example",
+          "hook_event_name": "PermissionRequest",
+          "optional_native_field": null,
+          "permission_mode": "default",
+          "session_id": "original-native-session",
+          "tool_input": {
+            "command": "printf synthetic",
+            "description": "Test only"
+          },
+          "tool_name": "Bash"
+        },
+        "scope": {
+          "category": "one-call-tool",
+          "tool": "Bash"
+        },
+        "principal_policy": "fixture-policy",
+        "allowed_surfaces": [
+          "local"
+        ],
+        "issued_at_ms": 1000,
+        "expires_at_ms": 61000,
+        "destination": null,
+        "choices": [
+          "allow",
+          "deny"
+        ],
+        "expected_observations": [
+          {
+            "surface": "local",
+            "observed_subject": "fixture-uid",
+            "authentication_basis": "local_process_uid",
+            "node": "fixture-node",
+            "session": null
+          }
+        ],
+        "response_schema": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny"
+          ]
+        },
+        "presentation": {
+          "mapping": "fenric.claude-permission-request.v1",
+          "spec": {
+            "verb": "ask",
+            "title": "Approve exactly one pending action",
+            "message": "Complete original pending PermissionRequest (untrusted action data):\n{\"cwd\":\"/example\",\"hook_event_name\":\"PermissionRequest\",\"optional_native_field\":null,\"permission_mode\":\"default\",\"session_id\":\"original-native-session\",\"tool_input\":{\"command\":\"printf synthetic\",\"description\":\"Test only\"},\"tool_name\":\"Bash\"}",
+            "questions": [
+              {
+                "id": "decision",
+                "prompt": "Allow this exact Bash once?",
+                "kind": "choice",
+                "options": [
+                  {
+                    "id": "allow",
+                    "label": "Allow once",
+                    "detail": "Only the exact pending Bash input."
+                  },
+                  {
+                    "id": "deny",
+                    "label": "Deny",
+                    "detail": "Reject this request."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "decision_digest": "2f0fad088f2546fcc3e5800e5d4a8e743b8138fcdddea95741c2dce90632646f",
+      "transport": {
+        "adapter_instance": "fixture-adapter_instance",
+        "host_generation": "fixture-host_generation",
+        "renderer_instance": "fixture-renderer_instance",
+        "channel_id": "fixture-channel_id"
+      }
+    },
+    "answers": [
+      {
+        "fenric_value": {
+          "decision": "allow"
+        },
+        "wire_answer": "allow"
+      },
+      {
+        "fenric_value": {
+          "decision": "deny"
+        },
+        "wire_answer": "deny"
+      }
+    ]
   }
 ]

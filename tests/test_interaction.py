@@ -698,7 +698,7 @@ def test_private_question_exchange(
             elif alteration == "schema":
                 current["response_schema"] = {"type": "boolean"}
             elif alteration == "native-join":
-                if route == "claude.approval":
+                if route in {"claude.approval", "claude.permission"}:
                     current["original"]["tool_name"] = "DifferentTool"
                 else:
                     rpc = current["original"].get("rpc", current["original"])

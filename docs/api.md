@@ -91,10 +91,10 @@ Pass that spec to run when you intend to show the review. Results are keyed by t
 ## run_integrated and IntegratedResult
 
 ```text
-run_integrated(channel, *, backend=None, cancel=None) -> IntegratedResult
+run_integrated(channel, *, backend=None, cancel=None, desktop_only=False) -> IntegratedResult
 ```
 
-channel must be an already connected, privately bootstrapped, host-admitted AF_UNIX/SOCK_STREAM socket. Fenric duplicates it, makes its copy non-inheritable, and shuts down the one-shot connection at return; the caller closes its original descriptor. Constructing a socket yourself does not confer native authority. backend and cancel are trusted integration seams, not worker-controlled admission knobs. No ordinary stdout answer, fallback file or status-file URL is used. See the [native integration walkthrough](native-approvals.md) and [wire reference](integration.md).
+channel must be an already connected, privately bootstrapped, host-admitted AF_UNIX/SOCK_STREAM socket. Fenric duplicates it, makes its copy non-inheritable, and shuts down the one-shot connection at return; the caller closes its original descriptor. Constructing a socket yourself does not confer native authority. desktop_only suppresses remote startup for an owner-selected local-only request; it grants no admission. backend and cancel are trusted integration seams, not worker-controlled admission knobs. No ordinary stdout answer, fallback file or status-file URL is used. See the [native integration walkthrough](native-approvals.md) and [wire reference](integration.md).
 
 | Field | Meaning |
 |---|---|
