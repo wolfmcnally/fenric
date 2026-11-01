@@ -1,6 +1,6 @@
 # Synchronous native permission host
 
-Available in development version 0.4.0.dev0; published 0.3.0 does not contain this adapter. Code/package deployment is distinct from hook registration and live acceptance.
+Available starting in 0.4.0. Code/package deployment is distinct from hook registration and live acceptance.
 
 The opt-in `fenric.native_permission` module handles **fresh default-mode Claude Bash PermissionRequest** events synchronously. It installs no hook. It is separate from the older phone-only `fenric.claude_permission` helper and does not change that helper's deployed configuration. A standalone Fenric answer, peer response, delivery acknowledgment or signed notification is never a native permission decision.
 

@@ -27,7 +27,7 @@ uv tool install .
 or from a built wheel:
 
 ```bash
-uv tool install fenric-0.4.0.dev0-py3-none-any.whl
+uv tool install fenric-0.4.0-py3-none-any.whl
 ```
 
 or with [pipx](https://pipx.pypa.io/):
@@ -148,4 +148,4 @@ Charts need [Bun](https://bun.sh) and a one-time `fenric setup-charts`; see the 
 
 ## Markdown documents
 
-The development source can read one or more selected Markdown files with document tabs, rendered/exact-source views and exact Copy: `fenric markdown --file notes.md --file decisions.md`. See the [Markdown viewer](docs/markdown.md) for bounds, safe rendering and protected-link delivery. Published versions through 0.3.0 do not include this command.
+Fenric 0.4.0 can read one or more selected Markdown files with document tabs, rendered/exact-source views and exact Copy: `fenric markdown --file notes.md --file decisions.md`. See the [Markdown viewer](docs/markdown.md) for bounds, safe rendering and protected-link delivery. This command was introduced in 0.4.0.

@@ -126,7 +126,7 @@ fenric --version
 It prints the version:
 
 ```text
-fenric 0.4.0.dev0
+fenric 0.4.0
 ```
 
 ## Focus and deliberate keyboard responses

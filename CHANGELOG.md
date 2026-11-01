@@ -2,11 +2,11 @@
 
 All notable changes to Fenric are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/). Until 1.0, a minor version may change the spec or the command line.
 
-## [Unreleased]
-
-- Add selected Markdown documents with safe rendered/exact-source views, accessible document tabs and exact-source Copy. Development source only; no release or installation implied.
+## [0.4.0] — 2026-11-01
 
 ### Added
+
+- Selected Markdown documents with safe rendered and exact-source views, visually attached accessible document tabs, a compact Rendered/Source switch, and exact-source Copy. Snapshot and inert-rendering bounds preserve private input selection and prevent implicit resource access.
 
 - A synchronous caller-owned native permission adapter with local account admission or URL-only delivery to a currently verified bounded Folded coordinator. Complete native action/context, direct response channel, principal policy, expiry and one settlement remain bound. No hook is installed or activated by package deployment.
 - An explicit default-mode Bash PermissionRequest mapping without fabricated native tool IDs, fail-closed JSON denial, and a bounded interaction lifetime below the native hook timeout. Existing auto-mode CLI classifier denials are not overridden; live SDK integration remains separate.

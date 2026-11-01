@@ -1,6 +1,6 @@
 # Read Markdown documents
 
-The development source adds a first-class `markdown` viewer. Published versions through 0.3.0 do not include it. Select one or more local `.md` or `.markdown` files, switch between Rendered and Source, and use Copy source for the original document text. Document tabs support Left/Right, Home/End and ordinary Tab navigation. The desktop window is resizable; long content scrolls on desktop and phone.
+Fenric 0.4.0 adds a first-class `markdown` viewer. Select one or more local `.md` or `.markdown` files, switch between Rendered and Source, and use Copy source for the original document text. Document tabs support Left/Right, Home/End and ordinary Tab navigation. The desktop window is resizable; long content scrolls on desktop and phone.
 
 ```bash
 fenric markdown --file examples/notes.md --title "Project notes"

@@ -477,7 +477,7 @@ Wherever a verb takes `options`, each entry is either a string, which is both th
 
 ### markdown
 
-Development source only. Required `files` is a list of 1–16 explicitly selected local `.md`/`.markdown` paths. Optional `title` is text, `view` is `rendered` (default) or `source`, and `height` is100–2000 (default 420). Common `verb`, `app` and `timeout` apply. A selection snapshots regular UTF-8 files once, at most256 KiB each/1 MiB total, refuses symlink components, parent traversal and NUL, and never resolves Markdown links/images/includes. Empty files are accepted. Result is presentation acknowledgment only: `ok` with no values. See the [viewer contract](markdown.md).
+Introduced in 0.4.0. Required `files` is a list of 1–16 explicitly selected local `.md`/`.markdown` paths. Optional `title` is text, `view` is `rendered` (default) or `source`, and `height` is100–2000 (default 420). Common `verb`, `app` and `timeout` apply. A selection snapshots regular UTF-8 files once, at most256 KiB each/1 MiB total, refuses symlink components, parent traversal and NUL, and never resolves Markdown links/images/includes. Empty files are accepted. Result is presentation acknowledgment only: `ok` with no values. See the [viewer contract](markdown.md).
 
 | Field | Meaning |
 | --- | --- |
