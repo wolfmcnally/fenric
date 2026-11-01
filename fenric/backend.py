@@ -217,10 +217,17 @@ class _Session:
             isinstance(height, int)
             and not isinstance(height, bool)
             and height != self._height
-            and (self._page.bundle is None or (height > 0 and self._height == 0))
+            and (
+                (self._page.bundle is None and not self._page.resizable)
+                or (height > 0 and self._height == 0)
+            )
         ):
             self._height = height
-            minimum = _HTML_MIN_SIZE[1] if self._page.bundle is not None else _MIN_HEIGHT
+            minimum = (
+                _HTML_MIN_SIZE[1]
+                if self._page.bundle is not None or self._page.resizable
+                else _MIN_HEIGHT
+            )
             wanted = min(_MAX_HEIGHT, max(minimum, height))
             _resize_window(self._window, self._page.width, wanted)
         done = state.get("done")
@@ -263,7 +270,7 @@ class PywebviewBackend:
 
             if macos:
                 _guard_bridge()
-            html = page.bundle is not None
+            html = page.bundle is not None or page.resizable
             window = webview.create_window(
                 page.title,
                 html=page.html,

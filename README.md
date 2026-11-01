@@ -145,3 +145,7 @@ Charts need [Bun](https://bun.sh) and a one-time `fenric setup-charts`; see the 
 - [Changelog](CHANGELOG.md)
 - [Reporting a security problem](SECURITY.md)
 - [Contributing](CONTRIBUTING.md): development setup, tests, the preview harness, and building the browser bundles and the archives.
+
+## Markdown documents
+
+The development source can read one or more selected Markdown files with document tabs, rendered/exact-source views and exact Copy: `fenric markdown --file notes.md --file decisions.md`. See the [Markdown viewer](docs/markdown.md) for bounds, safe rendering and protected-link delivery. Published versions through 0.3.0 do not include this command.

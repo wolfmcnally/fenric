@@ -365,6 +365,9 @@ def render_text(spec: Spec) -> str:
         lines.append(_plain_text(fields["html"]))
     elif spec.verb == "chart":
         lines.append("A chart was requested; it cannot be shown as text.")
+    elif spec.verb == "markdown":
+        lines.append("Selected Markdown content is not shown in this text fallback.")
+        lines.extend(document["name"] for document in fields["documents"])
     elif spec.verb == "html":
         lines.append("Selected HTML was requested; it cannot be shown as text.")
     rendered = "\n".join(lines) + "\n"

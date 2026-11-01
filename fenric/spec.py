@@ -17,8 +17,20 @@ from typing import Any
 
 from fenric.html_bundle import MAX_FILES, is_html_entry, valid_member_name
 from fenric.images import MAX_IMAGES, MAX_TOTAL_IMAGE_BYTES, validate_image
+from fenric.markdown import MAX_DOCUMENTS, MarkdownError, load_documents
 
-VERBS = ("notify", "confirm", "pick", "ask", "secret", "form", "custom", "chart", "html")
+VERBS = (
+    "notify",
+    "confirm",
+    "pick",
+    "ask",
+    "secret",
+    "form",
+    "custom",
+    "chart",
+    "html",
+    "markdown",
+)
 FORM_CATALOG_VERSION = 1
 DEFAULT_APP = "Fenric"
 MAX_TIMEOUT_SECONDS = 3600
@@ -38,6 +50,7 @@ VERB_FIELDS: dict[str, frozenset[str]] = {
     "custom": frozenset({"title", "html", "height"}),
     "chart": frozenset({"title", "code", "data", "height"}),
     "html": frozenset({"title", "root", "entry", "files", "height"}),
+    "markdown": frozenset({"title", "files", "view", "height"}),
 }
 _SECRET_NAME = re.compile(r"[A-Za-z0-9._-]+\Z")
 _QUESTION_KINDS = ("text", "choice", "multi")
@@ -518,6 +531,30 @@ def _html(spec: Mapping[str, Any]) -> tuple[dict[str, Any], None]:
     }, None
 
 
+def _markdown(spec: Mapping[str, Any]) -> tuple[dict[str, Any], None]:
+    _only(spec, _COMMON_FIELDS | VERB_FIELDS["markdown"], "spec")
+    files = _items(spec, "files", "files")
+    if len(files) > MAX_DOCUMENTS or not all(
+        type(item) is str and item and "\0" not in item for item in files
+    ):
+        raise SpecError("files", "must select 1 to 16 Markdown file paths")
+    if len(set(files)) != len(files):
+        raise SpecError("files", "must not contain duplicate paths")
+    view = spec.get("view", "rendered")
+    if view not in ("rendered", "source"):
+        raise SpecError("view", "must be rendered or source")
+    try:
+        documents = load_documents(files)
+    except MarkdownError as exc:
+        raise SpecError("files", str(exc)) from None
+    return {
+        "title": _text(spec, "title", "title"),
+        "documents": documents,
+        "view": view,
+        "height": _height(spec),
+    }, None
+
+
 _VERB_VALIDATORS: dict[str, Callable[[Mapping[str, Any]], tuple[dict[str, Any], str | None]]] = {
     "notify": _notify,
     "confirm": _confirm,
@@ -528,4 +565,5 @@ _VERB_VALIDATORS: dict[str, Callable[[Mapping[str, Any]], tuple[dict[str, Any], 
     "custom": _custom,
     "chart": _chart,
     "html": _html,
+    "markdown": _markdown,
 }

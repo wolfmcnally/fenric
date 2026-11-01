@@ -1,6 +1,6 @@
 # Contributing
 
-Fenric is small on purpose: one runtime dependency (`pywebview`, imported only when a window opens), a strict spec, and a security model every change has to keep. Read the [security model](docs/security.md) before changing anything a dialog shows or returns.
+Fenric is small on purpose: two runtime dependencies (`pywebview`, imported only when a window opens, and `mistune` for Markdown parsing), a strict spec, and a security model every change has to keep. Read the [security model](docs/security.md) before changing anything a dialog shows or returns.
 
 All commands below run from this directory.
 

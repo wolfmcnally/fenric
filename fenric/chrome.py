@@ -56,6 +56,7 @@ class Page:
     width: int
     bundle: HtmlBundle | None = None
     file_token: str | None = None
+    resizable: bool = False
 
 
 def outer_policy(
@@ -197,7 +198,7 @@ def build_page(
         + (f"<script>{remote_script}</script>" if remote else "")
         + "</body></html>"
     )
-    wide = spec.verb in ("custom", "chart", "html") or any(
+    wide = spec.verb in ("custom", "chart", "html", "markdown") or any(
         "image" in question for question in fields.get("questions", [])
     )
     return Page(
@@ -207,6 +208,7 @@ def build_page(
         width=_WIDE if wide else _NARROW,
         bundle=bundle,
         file_token=file_token,
+        resizable=spec.verb == "markdown",
     )
 
 
@@ -231,8 +233,8 @@ def _script_hash(code: str) -> str:
     return base64.b64encode(hashlib.sha256(code.encode("utf-8")).digest()).decode("ascii")
 
 
-def _button(action: str, label: str, *, primary: bool = False) -> str:
-    marker = " data-primary" if primary else ""
+def _button(action: str, label: str, *, primary: bool = False, tab_stop: bool = False) -> str:
+    marker = (" data-primary" if primary else "") + (' tabindex="0"' if tab_stop else "")
     return f'<button type="button" data-action="{action}"{marker}>{_e(label)}</button>'
 
 
@@ -560,6 +562,59 @@ def _html(spec: Spec, frame_url: str | None) -> _Built:
     ), _OK
 
 
+def _markdown(spec: Spec, unused: str | None) -> _Built:
+    source_view = spec.fields["view"] == "source"
+    parts = [
+        '<section class="markdown-view" data-markdown>',
+        '<p class="detail">Selected Markdown · links and images are inactive. '
+        "Copy copies exact source.</p>",
+        '<div role="tablist" aria-label="Documents" class="markdown-tabs">',
+    ]
+    for i, doc in enumerate(spec.fields["documents"]):
+        selected = "true" if i == 0 else "false"
+        parts.append(
+            f'<button type="button" role="tab" id="md-tab-{i}" '
+            f'aria-controls="md-panel-{i}" aria-selected="{selected}" '
+            f'tabindex="{0 if i == 0 else -1}">{i + 1}. {_e(doc["name"])}</button>'
+        )
+    parts.append('</div><div role="group" aria-label="Document view" class="markdown-modes">')
+    for mode, label in (("rendered", "Rendered"), ("source", "Exact source")):
+        parts.append(
+            f'<button type="button" tabindex="0" data-md-view="{mode}" '
+            f'aria-pressed="{str(spec.fields["view"] == mode).lower()}">{label}</button>'
+        )
+    parts.append("</div>")
+    for i, doc in enumerate(spec.fields["documents"]):
+        encoded = base64.b64encode(doc["source"].encode("utf-8")).decode("ascii")
+        inner = _frame_document(
+            "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'",
+            '<main tabindex="0" aria-label="Rendered Markdown document" '
+            'style="height:calc(100vh - 20px);overflow:auto;overflow-wrap:anywhere">'
+            + doc["rendered"]
+            + "</main>",
+        )
+        hidden = " hidden" if i else ""
+        parts.append(
+            f'<section role="tabpanel" id="md-panel-{i}" aria-labelledby="md-tab-{i}"{hidden} '
+            f'class="copy-view markdown-panel" data-md-panel>'
+        )
+        parts.append(
+            f'<iframe title="{_e(doc["name"])} — rendered Markdown" tabindex="0" sandbox="" '
+            f'data-md-rendered height="{spec.fields["height"]}" srcdoc="{_e(inner)}"'
+            f"{' hidden' if source_view else ''}></iframe>"
+        )
+        parts.append(
+            f'<pre tabindex="0" aria-label="Exact Markdown source" data-copy-base64="{encoded}" '
+            f"data-md-source{'' if source_view else ' hidden'}></pre>"
+        )
+        parts.append(
+            '<button type="button" tabindex="0" data-copy-button>Copy source</button>'
+            '<p data-copy-status role="status" aria-live="polite"></p></section>'
+        )
+    parts.append("</section>")
+    return "".join(parts), _button("ok", "Close", primary=True, tab_stop=True)
+
+
 _BUILDERS = {
     "notify": _notify,
     "confirm": _confirm,
@@ -570,4 +625,5 @@ _BUILDERS = {
     "custom": _custom,
     "chart": _chart,
     "html": _html,
+    "markdown": _markdown,
 }

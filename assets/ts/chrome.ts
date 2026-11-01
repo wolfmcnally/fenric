@@ -447,10 +447,11 @@ function controlInteraction(event: Event): void {
 }
 
 function startCopyView(): void {
-  const view = document.querySelector<HTMLElement>("#copy-text");
-  const button = document.querySelector<HTMLButtonElement>("#copy-button");
-  const status = document.querySelector<HTMLElement>("#copy-status");
-  if (!view || !button || !status) return;
+  for (const root of Array.from(document.querySelectorAll<HTMLElement>(".copy-view"))) {
+  const view = root.querySelector<HTMLElement>("[data-copy-base64]");
+  const button = root.querySelector<HTMLButtonElement>("#copy-button, [data-copy-button]");
+  const status = root.querySelector<HTMLElement>("#copy-status, [data-copy-status]");
+  if (!view || !button || !status) continue;
   const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(Uint8Array.from(atob(view.dataset.copyBase64 ?? ""), char => char.charCodeAt(0)));
   view.textContent = text;
   let copying = false;
@@ -459,11 +460,13 @@ function startCopyView(): void {
     copying = true;
     button.setAttribute("aria-disabled", "true");
     status.textContent = "Copying…";
+    let restoreRendered = false;
     try {
       if (navigator.clipboard?.writeText) {
         // Keep this call inside the original gesture for Safari/iPhone.
         await navigator.clipboard.writeText(text);
       } else {
+        if (view.hidden) { setMarkdownMode("source"); restoreRendered = true; }
         const selection = window.getSelection();
         const ranges = selection ? Array.from({ length: selection.rangeCount }, (_, i) => selection.getRangeAt(i).cloneRange()) : [];
         let written = false;
@@ -486,18 +489,53 @@ function startCopyView(): void {
           for (const range of ranges) selection?.addRange(range);
         }
       }
+      if (restoreRendered) setMarkdownMode("rendered");
       status.textContent = "Copied";
     } catch {
+      if (view.hidden) setMarkdownMode("source");
       status.textContent = "Copy unavailable. Select the text and copy it manually.";
     } finally {
       copying = false;
       button.removeAttribute("aria-disabled");
     }
   });
+  }
+}
+
+function setMarkdownMode(mode: string): void {
+  for (const panel of Array.from(document.querySelectorAll<HTMLElement>("[data-md-panel]"))) {
+    panel.querySelector<HTMLElement>("[data-md-source]")!.hidden = mode !== "source";
+    panel.querySelector<HTMLElement>("[data-md-rendered]")!.hidden = mode === "source";
+  }
+  for (const button of Array.from(document.querySelectorAll<HTMLElement>("[data-md-view]")))
+    button.setAttribute("aria-pressed", String(button.dataset.mdView === mode));
+  measure();
+}
+
+function startMarkdown(): void {
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-markdown] [role=tab]"));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-md-panel]"));
+  function select(index: number): void {
+    tabs.forEach((tab, i) => { tab.setAttribute("aria-selected", String(i === index)); tab.tabIndex = i === index ? 0 : -1; });
+    panels.forEach((panel, i) => { panel.hidden = i !== index; });
+    measure();
+  }
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => { if (state.done === null && !remotelySettled) select(index); });
+    tab.addEventListener("keydown", event => {
+      if (state.done !== null || remotelySettled || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      select(next); tabs[next].focus();
+    });
+  });
+  for (const button of Array.from(document.querySelectorAll<HTMLButtonElement>("[data-md-view]")))
+    button.addEventListener("click", () => { if (state.done === null && !remotelySettled) setMarkdownMode(button.dataset.mdView!); });
 }
 
 function start(): void {
   startCopyView();
+  startMarkdown();
   for (const image of Array.from(document.querySelectorAll<HTMLImageElement>(".question-image"))) {
     const figure = image.closest<HTMLElement>(".caller-image");
     const status = figure?.querySelector<HTMLElement>(".image-error");
@@ -591,6 +629,7 @@ function start(): void {
     } else if (event.key === "Enter" && wizard && event.repeat) {
       event.preventDefault();
     } else if (event.key === "Enter" && !(event.target instanceof Element && event.target.closest("summary")) && !(event.target instanceof HTMLTextAreaElement)) {
+      if (document.querySelector("[data-markdown]")) return;
       if (event.target instanceof Element && event.target.closest("button")) return;
       if (wizard && reviewing) return;
       const button = primary();

@@ -180,3 +180,13 @@ main.terminal {
 .review-image { display: block; width: auto; height: auto; max-width: 100%; max-height: 160px; margin: 0 0 10px; border: 1px solid var(--line); }
 
 .review-figure { margin: 16px 0 10px; padding: 12px; }
+
+/* Selected Markdown: document controls stay outside the inert content frame. */
+.markdown-view { min-width: 0; }
+.markdown-tabs, .markdown-modes { display: flex; gap: 6px; margin: 10px 0; }
+.markdown-tabs { overflow-x: auto; padding: 3px; }
+.markdown-tabs button { flex-shrink: 0; max-width: 240px; overflow-wrap: anywhere; }
+.markdown-tabs [aria-selected="true"], .markdown-modes [aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: -2px; }
+.markdown-panel iframe { width: 100%; border: 1px solid #8886; border-radius: 8px; max-height: 65vh; min-height: 160px; }
+.markdown-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; max-height: 65vh; overflow: auto; min-width: 0; }
+.markdown-panel[hidden], [data-md-source][hidden], [data-md-rendered][hidden] { display: none; }

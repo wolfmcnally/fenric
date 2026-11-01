@@ -4,6 +4,8 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+- Add selected Markdown documents with safe rendered/exact-source views, accessible document tabs and exact-source Copy. Development source only; no release or installation implied.
+
 ### Added
 
 - A synchronous caller-owned native permission adapter with local account admission or URL-only delivery to a currently verified bounded Folded coordinator. Complete native action/context, direct response channel, principal policy, expiry and one settlement remain bound. No hook is installed or activated by package deployment.

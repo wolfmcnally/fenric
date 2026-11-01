@@ -89,6 +89,8 @@ positional arguments:
     chart               Show a d3 chart written in TypeScript. Prints ok.
     html                Show unchanged explicitly selected HTML and supporting
                         files. Prints ok.
+    markdown            Read selected Markdown files with rendered/source
+                        views and exact Copy. Prints ok.
     interact            Answer a host-admitted request on an inherited private
                         channel.
     setup-charts        Provision the chart toolchain into the per-user cache.
@@ -724,3 +726,14 @@ Reports the enabled state and recorded configuration as JSON; no transport is st
 Writes disabled machine configuration; it starts no transport and changes no Serve mapping.
 
 Each browser page uses an opaque request marker. A losing page is told the dialog completed on another surface; it does not claim that its own entered value was stored. Retrying the same marker returns that recorded acknowledgement and never runs a sink twice. Markers and answers are not echoed in responses.
+
+### markdown
+
+`markdown` shows explicitly selected Markdown documents and prints `ok` only for presentation acknowledgment. Repeat `--file PATH` for local `.md`/`.markdown` files; `--view rendered|source` selects the initial view. `--title` names the window content and `--height` sets the initial frame height. Common `--app`, `--timeout`, `--desktop-only`, `--remote-status-file` and `--fallback-file` apply. See [Markdown](markdown.md) for the executable example, exact-source Copy, limits and inert-content contract.
+
+| Option | Meaning |
+| --- | --- |
+| `--file` | Explicit local Markdown path; repeat for documents. |
+| `--view` | Initial `rendered` or `source` view. |
+| `--title` | Optional content heading. |
+| `--height` | Initial content height, 100–2000. |

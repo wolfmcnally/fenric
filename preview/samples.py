@@ -54,6 +54,11 @@ CHART_DATA = [
 ]
 
 SAMPLES: dict[str, dict[str, Any]] = {
+    "markdown": {
+        "verb": "markdown",
+        "title": "Project notes",
+        "files": [str(Path(__file__).resolve().parents[1] / "docs/examples/notes.md")],
+    },
     "html": {
         "verb": "html",
         "app": APP,

@@ -85,7 +85,13 @@ def launch(playwright: Playwright) -> Browser:
         raise
 
 
-def open_dialog(browser: Browser, raw: dict[str, Any], *, scheme: str = "light") -> Dialog:
+def open_dialog(
+    browser: Browser,
+    raw: dict[str, Any],
+    *,
+    scheme: str = "light",
+    request_log: list[str] | None = None,
+) -> Dialog:
     """Load the page for ``raw`` with the clock paused at zero."""
     spec = validate_spec(raw)
     chart_script = None
@@ -118,6 +124,8 @@ def open_dialog(browser: Browser, raw: dict[str, Any], *, scheme: str = "light")
             device_scale_factor=SCALE,
         )
         page = context.new_page()
+        if request_log is not None:
+            page.on("request", lambda request: request_log.append(request.url))
         errors: list[str] = []
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.on(

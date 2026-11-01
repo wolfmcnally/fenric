@@ -45,6 +45,7 @@ _SCALAR_OPTIONS = {
     "custom": ("title", "html", "height"),
     "chart": ("title", "height"),
     "html": ("title", "height", "root", "entry"),
+    "markdown": ("title", "height", "view"),
 }
 _HELP = {
     "notify": "Show a message. Prints ok.",
@@ -61,6 +62,9 @@ _HELP = {
     "custom": "Show sanitized HTML in an inert frame. Prints ok.",
     "chart": "Show a d3 chart written in TypeScript. Prints ok.",
     "html": "Show unchanged explicitly selected HTML and supporting files. Prints ok.",
+    "markdown": (
+        "Read selected Markdown files with rendered/source views and exact Copy. Prints ok."
+    ),
 }
 
 
@@ -163,6 +167,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--file", action="append", default=absent, help="selected relative file; repeat"
     )
     html.add_argument("--height", type=int, default=absent)
+    markdown = verb("markdown")
+    text(markdown, "--title", "--view")
+    markdown.add_argument(
+        "--file",
+        action="append",
+        default=absent,
+        help="selected local .md or .markdown file; repeat",
+    )
+    markdown.add_argument("--height", type=int, default=absent)
     integrated = verbs.add_parser(
         "interact",
         allow_abbrev=False,
