@@ -568,20 +568,21 @@ def _markdown(spec: Spec, unused: str | None) -> _Built:
         '<section class="markdown-view" data-markdown>',
         '<p class="detail">Selected Markdown · links and images are inactive. '
         "Copy copies exact source.</p>",
-        '<div role="tablist" aria-label="Documents" class="markdown-tabs">',
+        '<div class="markdown-toolbar"><div role="group" aria-label="Document view" '
+        'class="markdown-modes">',
     ]
+    for mode, label in (("rendered", "Rendered"), ("source", "Source")):
+        parts.append(
+            f'<button type="button" tabindex="0" data-md-view="{mode}" '
+            f'aria-pressed="{str(spec.fields["view"] == mode).lower()}">{label}</button>'
+        )
+    parts.append('</div></div><div role="tablist" aria-label="Documents" class="markdown-tabs">')
     for i, doc in enumerate(spec.fields["documents"]):
         selected = "true" if i == 0 else "false"
         parts.append(
             f'<button type="button" role="tab" id="md-tab-{i}" '
             f'aria-controls="md-panel-{i}" aria-selected="{selected}" '
             f'tabindex="{0 if i == 0 else -1}">{i + 1}. {_e(doc["name"])}</button>'
-        )
-    parts.append('</div><div role="group" aria-label="Document view" class="markdown-modes">')
-    for mode, label in (("rendered", "Rendered"), ("source", "Exact source")):
-        parts.append(
-            f'<button type="button" tabindex="0" data-md-view="{mode}" '
-            f'aria-pressed="{str(spec.fields["view"] == mode).lower()}">{label}</button>'
         )
     parts.append("</div>")
     for i, doc in enumerate(spec.fields["documents"]):

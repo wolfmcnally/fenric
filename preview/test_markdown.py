@@ -24,6 +24,25 @@ def test_markdown_navigation_source_copy_and_inert_content(browser, tmp_path: Pa
             page.set_viewport_size({"width": 390, "height": 844})
         tabs = page.get_by_role("tab")
         expect(tabs.nth(0)).to_have_attribute("aria-selected", "true")
+        modes = page.get_by_role("group", name="Document view")
+        assert modes.get_by_role("button").all_text_contents() == ["Rendered", "Source"]
+        bounds = modes.bounding_box()
+        pane = page.locator("#md-panel-0 iframe").bounding_box()
+        tabstrip = page.get_by_role("tablist").bounding_box()
+        assert bounds and pane and tabstrip
+        assert abs(bounds["x"] + bounds["width"] - pane["x"] - pane["width"]) < 2
+        assert abs(tabstrip["y"] + tabstrip["height"] - pane["y"]) < 2
+        segments = modes.get_by_role("button")
+        left, right = segments.nth(0).bounding_box(), segments.nth(1).bounding_box()
+        assert left and right and abs(left["x"] + left["width"] - right["x"]) < 2
+        # Engage through actual Tab input; programmatic focus is deliberately
+        # insufficient to arm activation under the shared focus-safety policy.
+        page.keyboard.press("Tab")
+        expect(segments.nth(0)).to_be_focused()
+        page.keyboard.press("Tab")
+        expect(segments.nth(1)).to_be_focused()
+        page.keyboard.press("Enter")
+        expect(segments.nth(1)).to_have_attribute("aria-pressed", "true")
         page.locator("[data-md-view=source]").click()
         pre = page.locator("[data-md-panel]:not([hidden]) [data-md-source]")
         assert pre.text_content() == source
@@ -101,8 +120,7 @@ def test_long_rendered_document_is_keyboard_scrollable(browser, tmp_path, width)
         page.clock.resume()
         page.set_viewport_size({"width": width, "height": 800})
         page.get_by_role("tab").click()
-        for _ in range(3):
-            page.keyboard.press("Tab")
+        page.keyboard.press("Tab")
         assert page.evaluate("document.activeElement.tagName") == "IFRAME"
         frame = page.frames[1]
         for _ in range(3):
@@ -122,6 +140,35 @@ def test_long_rendered_document_is_keyboard_scrollable(browser, tmp_path, width)
         ):
             time.sleep(0.025)
         assert frame.locator("main").evaluate("e => e.scrollTop") > 0
+        assert dialog.done() is None
+    finally:
+        dialog.close()
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_document_tabs_scroll_without_mobile_page_overflow(browser, tmp_path, scheme):
+    files = []
+    for i in range(8):
+        document = tmp_path / (f"Document-{i}-" + "long-name-" * 8 + ".md")
+        document.write_text(f"# Document {i}\n")
+        files.append(str(document))
+    dialog = open_dialog(browser, {"verb": "markdown", "files": files})
+    try:
+        page = dialog.page
+        page.set_viewport_size({"width": 320, "height": 640})
+        page.emulate_media(color_scheme=scheme)
+        tabs = page.get_by_role("tab")
+        tabs.first.click()
+        page.keyboard.press("End")
+        expect(tabs.last).to_be_focused()
+        expect(tabs.last).to_have_attribute("aria-selected", "true")
+        for selected in [tabs.last, page.locator('[data-md-view][aria-pressed="true"]')]:
+            assert "inset" in selected.evaluate("e => getComputedStyle(e).boxShadow")
+        assert page.get_by_role("tablist").evaluate("e => e.scrollLeft > 0")
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        expect(page.frame_locator("#md-panel-7 iframe").get_by_role("heading")).to_have_text(
+            "Document 7"
+        )
         assert dialog.done() is None
     finally:
         dialog.close()
