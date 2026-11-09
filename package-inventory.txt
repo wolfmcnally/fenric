@@ -89,6 +89,10 @@ docs/examples/orders.json
 docs/examples/pick.json
 docs/examples/secret.json
 docs/examples/untrusted.html
+docs/examples/video-demo/PROVENANCE.md
+docs/examples/video-demo/index.html
+docs/examples/video-demo/sample.mp4
+docs/examples/video-demo/sample.webm
 docs/images/ask-wizard.png
 docs/images/ask.png
 docs/images/chart.png
@@ -194,6 +198,8 @@ preview/samples.py
 preview/test_behavior.py
 preview/test_gallery.py
 preview/test_markdown.py
+preview/test_reading.py
+preview/test_video.py
 preview/test_mobile.py
 pyproject.toml
 tests/__init__.py

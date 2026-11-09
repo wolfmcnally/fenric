@@ -487,6 +487,8 @@ ok
 
 ### chart
 
+For selected local video, use the bounded `html` surface described in [video previews](media.md#present-selected-video). MP4/WebM support is an unreleased addition after 0.4.0; it does not require the chart toolchain or permit outside media URLs.
+
 Shows a chart drawn by d3 code written in TypeScript. The code is type-checked and compiled before the window opens, and runs against the real DOM with ordinary browser networking and no native filesystem/Python API. Prints `ok`. Charts use the same ordinary DOM/d3 on native and configured remote surfaces, and need `fenric setup-charts` once.
 
 | Option | Meaning |
@@ -737,3 +739,13 @@ Each browser page uses an opaque request marker. A losing page is told the dialo
 | `--view` | Initial `rendered` or `source` view. |
 | `--title` | Optional content heading. |
 | `--height` | Initial content height, 100–2000. |
+
+## Select, copy and speak
+
+The unreleased revision after 0.4.0 makes nonsecret displayed text selectable using ordinary mouse/touch selection. Every nonsecret dialog also offers **Select all text**, **Copy displayed text** and **Speak**, with **Stop speaking** during speech. Select all opens a selectable plain-text projection of the visible static content; it does not select input values, hidden documents/branches, buttons or secret controls. Copy reports actual clipboard completion or reveals the selected text for manual copying. It never reads the clipboard. The existing literal Copy text and Markdown Copy source controls retain their exact payloads.
+
+Speak reads the current displayed projection in bounded sequential chunks, using only an explicitly selected voice reported as local by the browser. It starts on a trusted click/tap, never automatically, and offers no remote/default voice fallback. A missing API, remote-only inventory, still-empty voice list or speech error is reported visibly; try Speak again once local voices become available, or use the operating system's selection speech controls. No voice, service, microphone permission or credentials are installed or requested. Speak and Copy do not submit an answer; activating the outer controls counts as interaction under the existing timer rules, while the caller's hard lifetime still applies. Speech stops on Stop, document/view changes, settlement/expiry, page hiding and unload.
+
+For custom HTML and Rendered Markdown, the projection comes from sanitized text prepared before display. Source mode reads the visible exact source representation, including its Markdown syntax. HTML/chart frame content remains opaque and is excluded from the outer reader: select within the frame using the device's normal controls or provide the same proposal as Markdown/custom text for Speak. Selection inside caller-selected HTML also depends on its own styles. Secret dialogs have no reading toolbar; secret values never enter its text collection.
+
+Browser and OS support varies. A local voice flag is a browser/OS contract, not independent proof of the speech service's internals. Fenric's automated WebKit tests prove gesture, local-voice selection, chunking and stop behavior with a controlled speech double; audible speech, offline behavior and physical-phone integration need separate manual qualification. Native GUI behavior on Linux/Windows remains unverified. See the [Web Speech API voice-locality contract](https://webaudio.github.io/web-speech-api/#dom-speechsynthesisvoice-localservice) (as of 2026-10-27; retrieved 2026-11-08).

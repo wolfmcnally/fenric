@@ -60,6 +60,7 @@ def archives(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         marker.write_text("Synthetic local evidence must never ship.\n", encoding="utf-8")
         # Exercise private and oversized media exclusion without using actual recordings.
         (Path(scratch) / "private-recording.wav").write_bytes(b"synthetic private audio")
+        (Path(scratch) / "private-film.mp4").write_bytes(b"synthetic private video")
         with (Path(scratch) / "large-recording.wav").open("wb") as large:
             large.truncate(17 * 1024 * 1024)
         return package.build(tmp_path_factory.mktemp("dist"))
@@ -90,13 +91,22 @@ def test_built_archives_match_the_inventory(archives: dict[str, Path]) -> None:
     assert not any(name.startswith(".kickoff/") for name in found["wheel"])
 
 
-def test_only_the_named_tiny_public_audio_demo_ships(archives: dict[str, Path]) -> None:
-    media = {".wav", ".mp3", ".aac", ".m4a", ".flac", ".ogg", ".aiff"}
+def test_only_the_named_tiny_public_media_demos_ship(archives: dict[str, Path]) -> None:
+    media = {".wav", ".mp3", ".aac", ".m4a", ".flac", ".ogg", ".aiff", ".mp4", ".webm", ".mov"}
     wheel = _wheel_files(archives["wheel"])
     sdist = _sdist_files(archives["sdist"])
     assert not [name for name in wheel if Path(name).suffix.lower() in media]
     audio = {name: data for name, data in sdist.items() if Path(name).suffix.lower() in media}
-    assert set(audio) == {"docs/examples/audio-demo/tone.wav"}
+    assert set(audio) == {
+        "docs/examples/audio-demo/tone.wav",
+        "docs/examples/video-demo/sample.mp4",
+        "docs/examples/video-demo/sample.webm",
+    }
+    for name in ("sample.mp4", "sample.webm", "index.html", "PROVENANCE.md"):
+        relative = "docs/examples/video-demo/" + name
+        assert sdist[relative] == (PROJECT / relative).read_bytes()
+        assert len(sdist[relative]) < 64 * 1024
+    assert not any("private-film" in name for name in sdist)
     demo = audio["docs/examples/audio-demo/tone.wav"]
     assert demo == (PROJECT / "docs/examples/audio-demo/tone.wav").read_bytes()
     assert len(demo) == 9644

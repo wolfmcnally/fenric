@@ -442,25 +442,35 @@ def test_http_refuses_foreign_and_malformed_requests(capfd, monkeypatch, tmp_pat
 
 
 @pytest.mark.parametrize("local", [False, True])
-def test_selected_wav_ranges_are_exact_private_and_invocation_scoped(tmp_path, local):
+@pytest.mark.parametrize(
+    "extension,kind", [("wav", "audio/wav"), ("mp4", "video/mp4"), ("webm", "video/webm")]
+)
+def test_selected_media_ranges_are_exact_private_and_invocation_scoped(
+    tmp_path, local, extension, kind
+):
     from fenric.html_bundle import load_bundle
 
     from .support import score_audio_document, wav_sample
 
-    wav = wav_sample()
+    wav = (
+        wav_sample()
+        if extension == "wav"
+        else (PROJECT / "docs/examples/video-demo" / f"sample.{extension}").read_bytes()
+    )
+    name = f"draft.{extension}"
     score = "\\version \"2.24.4\"\n{ c'4 d' e' }\n</pre><script>bad()</script>"
     original = score_audio_document(score)
     (tmp_path / "index.html").write_text(original)
-    (tmp_path / "draft.wav").write_bytes(wav)
+    (tmp_path / name).write_bytes(wav)
     (tmp_path / "other.wav").write_bytes(b"unselected")
-    bundle = load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
-    (tmp_path / "draft.wav").write_bytes(b"changed after snapshot")
+    bundle = load_bundle(str(tmp_path), "index.html", ["index.html", name])
+    (tmp_path / name).write_bytes(b"changed after snapshot")
     spec = validate_spec(
         {
             "verb": "html",
             "root": str(tmp_path),
             "entry": "index.html",
-            "files": ["index.html", "draft.wav"],
+            "files": ["index.html", name],
         }
     )
     page = build_page(spec, bundle=bundle, file_token="audio-capability")
@@ -473,11 +483,11 @@ def test_selected_wav_ranges_are_exact_private_and_invocation_scoped(tmp_path, l
             ("X-Forwarded-Proto", "https"),
             ("Tailscale-User-Login", LOGIN),
         ]
-    path = transport.files_path + "draft.wav"
+    path = transport.files_path + name
     try:
         status, data, headers = request(transport, path=path, headers=base)
         assert (status, data) == (200, wav)
-        assert headers["Content-Type"] == "audio/wav"
+        assert headers["Content-Type"] == kind
         assert headers["Content-Length"] == str(len(wav))
         assert headers["Accept-Ranges"] == "bytes"
         assert (
@@ -545,6 +555,9 @@ def test_selected_wav_ranges_are_exact_private_and_invocation_scoped(tmp_path, l
                 (k, "foreign@example.com" if k == "Tailscale-User-Login" else v) for k, v in base
             ]
             assert request(transport, path=path, headers=wrong)[0] == 403
+        session._authority_deadline = time.monotonic() - 1
+        assert request(transport, path=path, headers=base + [("Range", "bytes=0-1")])[0] == 403
+        session._authority_deadline = None
         assert not session.state()["touched"]
         session.settle(backend.Outcome(backend.CANCELLED))
         assert request(transport, path=path, headers=base + [("Range", "bytes=0-1")])[0] == 403
@@ -588,13 +601,110 @@ def test_wav_selection_keeps_other_media_and_custom_policy_unchanged(tmp_path, m
         html_bundle.load_bundle(
             str(tmp_path), "index.html", ["index.html"] + [f"{i}.wav" for i in range(9)]
         )
-    monkeypatch.setattr(html_bundle, "MAX_WAV_NAME_BYTES", 5)
+    monkeypatch.setattr(html_bundle, "MAX_MEDIA_NAME_BYTES", 5)
     with pytest.raises(html_bundle.HtmlError, match="media policy"):
         html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
-    monkeypatch.setattr(html_bundle, "MAX_WAV_NAME_BYTES", 1024)
+    monkeypatch.setattr(html_bundle, "MAX_MEDIA_NAME_BYTES", 1024)
     monkeypatch.setattr(html_bundle, "MAX_FILE_BYTES", 16)
     with pytest.raises(html_bundle.HtmlError):
         html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", "draft.wav"])
+
+
+@pytest.mark.parametrize("local", [False, True])
+@pytest.mark.parametrize("extension", ["mp4", "webm"])
+def test_film_sized_video_snapshot_ranges_and_type_specific_bounds(
+    tmp_path, monkeypatch, local, extension
+):
+    from fenric import html_bundle
+
+    assert html_bundle.MAX_FILE_BYTES == 16 * 1024 * 1024
+    assert html_bundle.MAX_VIDEO_BYTES == 64 * 1024 * 1024
+    assert html_bundle.MAX_TOTAL_BYTES == 128 * 1024 * 1024
+    size = 23_957_405  # Synthetic bytes matching a short-film review use case.
+    name = f"selected.{extension}"
+    video = tmp_path / name
+    with video.open("wb") as stream:
+        stream.write(b"synthetic-start")
+        stream.truncate(size)
+        stream.seek(size - 13)
+        stream.write(b"synthetic-end")
+    (tmp_path / "index.html").write_text(f'<video controls src="{name}"></video>')
+    bundle = html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", name])
+    assert len(bundle.resources[name].data) == size
+    video.write_bytes(b"changed after snapshot")
+    spec = validate_spec(
+        {
+            "verb": "html",
+            "root": str(tmp_path),
+            "entry": "index.html",
+            "files": ["index.html", name],
+        }
+    )
+    page = build_page(spec, bundle=bundle, file_token="video-capability")
+    session = Session(60, lambda p: p, lambda v: "ok")
+    transport = remote.Transport(page, session, HOST + ":8443", LOGIN, local=local)
+    headers = [("Host", transport.authority)]
+    if not local:
+        headers += [
+            ("X-Forwarded-Host", transport.authority),
+            ("X-Forwarded-Proto", "https"),
+            ("Tailscale-User-Login", LOGIN),
+        ]
+    try:
+        for byte_request in ["bytes=0-13", "bytes=16777216-16777231", "bytes=-13"]:
+            start, end = html_bundle.byte_range(byte_request, size)
+            code, body, fields = request(
+                transport,
+                path=transport.files_path + name,
+                headers=headers + [("Range", byte_request)],
+            )
+            assert code == 206 and body == bundle.resources[name].data[start : end + 1]
+            assert fields["Content-Range"] == f"bytes {start}-{end}/{size}"
+            assert fields["Cache-Control"] == "no-store"
+            assert fields["X-Content-Type-Options"] == "nosniff"
+    finally:
+        transport.close()
+        session.close()
+    for suffix, bound in [
+        (extension, html_bundle.MAX_VIDEO_BYTES),
+        ("wav", html_bundle.MAX_FILE_BYTES),
+    ]:
+        filename = f"oversized.{suffix}"
+        with (tmp_path / filename).open("wb") as stream:
+            stream.truncate(bound + 1)
+        with pytest.raises(html_bundle.HtmlError):
+            html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", filename])
+    # Exercise the inclusive video boundary without allocating another 64 MiB.
+    monkeypatch.setattr(html_bundle, "MAX_VIDEO_BYTES", 32)
+    video.write_bytes(b"x" * 32)
+    assert (
+        len(
+            html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", name])
+            .resources[name]
+            .data
+        )
+        == 32
+    )
+    monkeypatch.setattr(
+        html_bundle, "MAX_TOTAL_BYTES", (tmp_path / "index.html").stat().st_size + 31
+    )
+    with pytest.raises(html_bundle.HtmlError, match="size limit"):
+        html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html", name])
+
+
+def test_mixed_video_audio_policy_is_combined_exact_and_bounded(tmp_path):
+    from fenric import html_bundle
+
+    (tmp_path / "index.html").write_text("<p>Selected media</p>")
+    names = [f"{i}.{['wav', 'mp4', 'webm'][i % 3]}" for i in range(9)]
+    for name in names:
+        (tmp_path / name).write_bytes(b"media")
+    bundle = html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html"] + names[:8])
+    prefix = "https://fixture.invalid/private/files/"
+    media = html_bundle.document_policy(prefix, bundle).split("media-src ")[1].split(";")[0]
+    assert media.split() == [prefix + name for name in names[:8]]
+    with pytest.raises(html_bundle.HtmlError, match="media policy"):
+        html_bundle.load_bundle(str(tmp_path), "index.html", ["index.html"] + names)
 
 
 def test_remote_desktop_race_stores_once_and_replays(tailnet, tmp_path, capfd):

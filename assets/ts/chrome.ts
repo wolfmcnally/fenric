@@ -40,7 +40,7 @@ function finish(done: NonNullable<State["done"]>): void {
     if (!confirmation.checked) return;
     done.payload.destination_confirmed = true;
   }
-  if (state.done === null && !remotelySettled) state.done = done;
+  if (state.done === null && !remotelySettled) { stopReading(); state.done = done; }
 }
 
 function inputs(): HTMLElement[] {
@@ -215,6 +215,7 @@ function renderReview(): void {
     const title = document.createElement("h3");
     title.textContent = question.querySelector(".step-heading")?.textContent ?? "";
     const answer = document.createElement("p");
+    answer.dataset.userAnswer = "true";
     answer.textContent = answerSummary(question);
     const edit = document.createElement("button");
     edit.type = "button";
@@ -276,6 +277,7 @@ function showStep(focus = false): void {
   const button = primary();
   if (button) button.setAttribute("aria-disabled", String(reviewing ? !complete() : !stepComplete(questions[currentQuestion])));
   if (focus) {
+    readingViewChanged();
     const target = reviewing ? review?.querySelector<HTMLElement>("h2") : questions[currentQuestion]?.querySelector<HTMLElement>(".step-heading");
     target?.focus();
   }
@@ -389,6 +391,7 @@ interface SharedState { touched: boolean; remaining: number | null; status: stri
   if (shared.touched) showTimeoutCanceled();
   if (shared.remaining !== null && !state.touched) startRing(shared.remaining);
   if (shared.status !== null) {
+    stopReading();
     remotelySettled = true;
     for (const element of inputs()) {
       if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.value = "";
@@ -503,6 +506,7 @@ function startCopyView(): void {
 }
 
 function setMarkdownMode(mode: string): void {
+  readingViewChanged();
   for (const panel of Array.from(document.querySelectorAll<HTMLElement>("[data-md-panel]"))) {
     panel.querySelector<HTMLElement>("[data-md-source]")!.hidden = mode !== "source";
     panel.querySelector<HTMLElement>("[data-md-rendered]")!.hidden = mode === "source";
@@ -516,6 +520,7 @@ function startMarkdown(): void {
   const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-markdown] [role=tab]"));
   const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-md-panel]"));
   function select(index: number): void {
+    readingViewChanged();
     tabs.forEach((tab, i) => { tab.setAttribute("aria-selected", String(i === index)); tab.tabIndex = i === index ? 0 : -1; });
     panels.forEach((panel, i) => { panel.hidden = i !== index; });
     measure();
@@ -533,9 +538,143 @@ function startMarkdown(): void {
     button.addEventListener("click", () => { if (state.done === null && !remotelySettled) setMarkdownMode(button.dataset.mdView!); });
 }
 
+// Only Fenric-authored, visible static text is read. Inputs are never inspected.
+// Opaque inert documents supply a Python-prepared text projection; selected HTML
+// and charts deliberately have no adapter into their live frame contents.
+function displayedText(): string {
+  const parts: string[] = [];
+  function visit(node: Node): void {
+    if (node instanceof Text) { parts.push(node.data); return; }
+    if (!(node instanceof HTMLElement)) return;
+    if (node.matches('input, textarea, select, button, script, style, .reading-tools, .actions, .asker, .badge, [data-user-answer], [role="tablist"], [role="status"]')) return;
+    const style = getComputedStyle(node);
+    if (node.hidden || style.display === "none" || style.visibility === "hidden" || style.clipPath === "inset(50%)") return;
+    if (node.dataset.readingBase64 !== undefined) {
+      parts.push("\n", new TextDecoder().decode(Uint8Array.from(atob(node.dataset.readingBase64), c => c.charCodeAt(0))), "\n");
+      return;
+    }
+    if (node instanceof HTMLIFrameElement) return;
+    const block = !["inline", "contents"].includes(style.display);
+    if (block) parts.push("\n");
+    for (const child of Array.from(node.childNodes)) {
+      if (node instanceof HTMLDetailsElement && !node.open && !(child instanceof HTMLElement && child.tagName === "SUMMARY")) continue;
+      visit(child);
+    }
+    if (block) parts.push("\n");
+  }
+  const main = document.querySelector("main");
+  if (main) visit(main);
+  return parts.join("").replace(/\n[ \t]*\n[ \t]*\n/g, "\n\n").trim();
+}
+
+let speechGeneration = 0;
+let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+function stopReading(): void {
+  speechGeneration++;
+  if (activeUtterance) {
+    activeUtterance = null;
+    try { window.speechSynthesis?.cancel(); } catch { /* No fallback engine. */ }
+    const status = document.querySelector<HTMLElement>("[data-read-status]");
+    if (status) status.textContent = "Speech stopped.";
+  }
+  const button = document.querySelector<HTMLButtonElement>("[data-read-stop]");
+  if (button) button.hidden = true;
+}
+
+function readingViewChanged(): void {
+  stopReading();
+  const preview = document.querySelector<HTMLElement>("[data-read-preview]");
+  if (preview) preview.hidden = true;
+}
+
+function startReadingTools(): void {
+  const tools = document.querySelector<HTMLElement>(".reading-tools");
+  if (!tools) return; // Secret dialogs have no reading surface.
+  const status = tools.querySelector<HTMLElement>("[data-read-status]")!;
+  const preview = tools.querySelector<HTMLElement>("[data-read-preview]")!;
+  const stop = tools.querySelector<HTMLButtonElement>("[data-read-stop]")!;
+  const available = (event: Event): boolean => event.isTrusted && state.done === null && !remotelySettled;
+  function select(text: string): void {
+    preview.textContent = text;
+    preview.hidden = false;
+    preview.focus();
+    const range = document.createRange();
+    range.selectNodeContents(preview);
+    const selection = window.getSelection();
+    selection?.removeAllRanges(); selection?.addRange(range);
+    measure();
+  }
+  tools.querySelector("[data-read-select]")!.addEventListener("click", event => {
+    if (available(event)) { select(displayedText()); status.textContent = "Displayed text selected. Copy with your device's selection controls."; }
+  });
+  tools.querySelector("[data-read-copy]")!.addEventListener("click", async event => {
+    if (!available(event)) return;
+    const text = displayedText();
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error();
+      await navigator.clipboard.writeText(text);
+      status.textContent = "Copied displayed text.";
+    } catch {
+      if (state.done === null && !remotelySettled) {
+        select(text); status.textContent = "Copy unavailable. Text selected for manual copying.";
+      }
+    }
+  });
+  tools.querySelector("[data-read-speak]")!.addEventListener("click", event => {
+    if (!available(event)) return;
+    stopReading();
+    const generation = speechGeneration;
+    try {
+      const engine = window.speechSynthesis;
+      const voices = engine?.getVoices().filter(voice => voice.localService === true) ?? [];
+      const language = (navigator.language || document.documentElement.lang).split("-")[0].toLowerCase();
+      const voice = voices.find(v => v.lang.toLowerCase().split("-")[0] === language) ?? voices[0];
+      if (!voice || typeof SpeechSynthesisUtterance === "undefined") {
+        status.textContent = "Local speech unavailable on this device. No remote voice is used. Try your system's Speak Selection controls.";
+        return;
+      }
+      let remaining = displayedText();
+      if (!remaining) { status.textContent = "No displayed text to read."; return; }
+      const next = (): void => {
+        if (generation !== speechGeneration || state.done !== null || remotelySettled || document.hidden) return;
+        if (!remaining) {
+          activeUtterance = null; stop.hidden = true; status.textContent = "Finished speaking."; return;
+        }
+        let end = Math.min(remaining.length, 220);
+        if (end < remaining.length) {
+          const space = remaining.lastIndexOf(" ", end);
+          if (space > 0) end = space + 1;
+        }
+        const utterance = new SpeechSynthesisUtterance(remaining.slice(0, end));
+        remaining = remaining.slice(end);
+        utterance.voice = voice; utterance.lang = voice.lang;
+        utterance.onstart = () => { if (generation === speechGeneration) status.textContent = "Speaking with a local device voice."; };
+        utterance.onend = next;
+        utterance.onerror = () => {
+          if (generation !== speechGeneration) return;
+          stopReading(); status.textContent = "Local speech failed. No remote voice is used.";
+        };
+        activeUtterance = utterance;
+        stop.hidden = false;
+        try { engine.speak(utterance); }
+        catch { stopReading(); status.textContent = "Local speech failed. No remote voice is used."; }
+      };
+      status.textContent = "Starting local speech…";
+      next();
+    } catch {
+      stopReading(); status.textContent = "Local speech unavailable. No remote voice is used.";
+    }
+  });
+  stop.addEventListener("click", event => { if (available(event)) stopReading(); });
+  window.addEventListener("pagehide", stopReading);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopReading(); });
+}
+
 function start(): void {
   startCopyView();
   startMarkdown();
+  startReadingTools();
   for (const image of Array.from(document.querySelectorAll<HTMLImageElement>(".question-image"))) {
     const figure = image.closest<HTMLElement>(".caller-image");
     const status = figure?.querySelector<HTMLElement>(".image-error");

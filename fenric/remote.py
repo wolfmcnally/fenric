@@ -25,7 +25,7 @@ from urllib.parse import unquote, urlsplit
 
 from fenric import backend
 from fenric.chrome import Page
-from fenric.html_bundle import byte_range, document_policy, valid_member_name
+from fenric.html_bundle import MEDIA_TYPES, byte_range, document_policy, valid_member_name
 from fenric.serve_guard import stop_group
 from fenric.session import Session
 
@@ -315,7 +315,7 @@ class Transport:
                         ):
                             raise ValueError
                         resource = page.bundle.resources[name]
-                        if resource.content_type != "audio/wav":
+                        if resource.content_type not in MEDIA_TYPES:
                             self.reply(200, resource.data, resource.content_type, resource=True)
                             return
                         size = len(resource.data)

@@ -12,9 +12,10 @@ from types import MappingProxyType
 from urllib.parse import quote
 
 MAX_FILES = 4096
-MAX_WAV_FILES = 8
-MAX_WAV_NAME_BYTES = 1024
+MAX_MEDIA_FILES = 8
+MAX_MEDIA_NAME_BYTES = 1024
 MAX_FILE_BYTES = 16 * 1024 * 1024
+MAX_VIDEO_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_BYTES = 128 * 1024 * 1024
 _TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -31,7 +32,11 @@ _TYPES = {
     ".woff": "font/woff",
     ".woff2": "font/woff2",
     ".wav": "audio/wav",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
 }
+VIDEO_TYPES = frozenset({"video/mp4", "video/webm"})
+MEDIA_TYPES = frozenset({"audio/wav"}) | VIDEO_TYPES
 
 
 class HtmlError(ValueError):
@@ -68,6 +73,7 @@ def is_html_entry(name: str) -> bool:
 
 
 def _read(root: int, name: str) -> bytes:
+    limit = MAX_VIDEO_BYTES if _TYPES[Path(name).suffix.lower()] in VIDEO_TYPES else MAX_FILE_BYTES
     directory = os.dup(root)
     try:
         parts = name.split("/")
@@ -86,14 +92,14 @@ def _read(root: int, name: str) -> bytes:
         )
         try:
             before = os.fstat(descriptor)
-            if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_FILE_BYTES:
+            if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
                 raise HtmlError("HTML bundle contains an unsupported file")
             chunks: list[bytes] = []
             size = 0
-            while chunk := os.read(descriptor, min(65536, MAX_FILE_BYTES + 1 - size)):
+            while chunk := os.read(descriptor, min(65536, limit + 1 - size)):
                 chunks.append(chunk)
                 size += len(chunk)
-                if size > MAX_FILE_BYTES:
+                if size > limit:
                     raise HtmlError("HTML bundle exceeds its size limit")
             after = os.fstat(descriptor)
             if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
@@ -120,11 +126,11 @@ def load_bundle(root: str, entry: str, files: list[str]) -> HtmlBundle:
         or not all(valid_member_name(name) for name in files)
     ):
         raise HtmlError("HTML bundle selection is invalid")
-    wav_names = [name for name in files if Path(name).suffix.lower() == ".wav"]
+    media_names = [name for name in files if _TYPES[Path(name).suffix.lower()] in MEDIA_TYPES]
     if (
-        len(wav_names) > MAX_WAV_FILES
-        or sum(len(quote(name, safe="/").encode("ascii")) for name in wav_names)
-        > MAX_WAV_NAME_BYTES
+        len(media_names) > MAX_MEDIA_FILES
+        or sum(len(quote(name, safe="/").encode("ascii")) for name in media_names)
+        > MAX_MEDIA_NAME_BYTES
     ):
         raise HtmlError("HTML bundle exceeds its media policy limit")
     resources: dict[str, Resource] = {}
@@ -174,7 +180,7 @@ def document_policy(prefix: str, bundle: HtmlBundle | None = None) -> str:
         " ".join(
             prefix + quote(name, safe="/")
             for name, resource in (bundle.resources.items() if bundle else ())
-            if resource.content_type == "audio/wav"
+            if resource.content_type in MEDIA_TYPES
         )
         or "'none'"
     )

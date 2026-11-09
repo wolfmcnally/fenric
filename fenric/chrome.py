@@ -21,7 +21,7 @@ from urllib.parse import urlsplit
 
 from fenric.html_bundle import HtmlBundle
 from fenric.images import MAX_COMMENT_LENGTH
-from fenric.sanitize import sanitize_html
+from fenric.sanitize import plain_text, sanitize_html
 from fenric.spec import Spec
 
 GENERATED_BADGE = "Generated content"
@@ -153,6 +153,18 @@ def build_page(
         body = '<p role="status">Review only. Answer using an admitted surface.</p>'
         actions = _button("cancel", "Close")
     parts.append(body)
+    if spec.verb != "secret":
+        parts.append(
+            '<section class="reading-tools" aria-label="Read displayed text">'
+            '<div class="reading-buttons">'
+            '<button type="button" data-read-select>Select all text</button>'
+            '<button type="button" data-read-copy>Copy displayed text</button>'
+            '<button type="button" data-read-speak>Speak</button>'
+            '<button type="button" data-read-stop hidden>Stop speaking</button></div>'
+            '<p data-read-status role="status" aria-live="polite"></p>'
+            '<pre data-read-preview tabindex="0" aria-label="Displayed text" hidden></pre>'
+            "</section>"
+        )
     if interaction is not None and spec.verb == "secret" and not review_only:
         parts.append(
             '<label class="choice"><input type="checkbox" data-destination-confirmation>'
@@ -214,6 +226,10 @@ def build_page(
 
 def _e(text: object) -> str:
     return escape(str(text), quote=True)
+
+
+def _b64(text: str) -> str:
+    return base64.b64encode(text.encode("utf-8")).decode("ascii")
 
 
 def _asset(name: str) -> str:
@@ -504,12 +520,21 @@ def _form(spec: Spec, chart_script: str | None) -> _Built:
     return _form_components(spec.fields["components"], [0]), _CANCEL_OK
 
 
-def _frame(document: str, sandbox: str, height: int, frame_id: str, *, url: bool = False) -> str:
+def _frame(
+    document: str,
+    sandbox: str,
+    height: int,
+    frame_id: str,
+    *,
+    url: bool = False,
+    reading: str | None = None,
+) -> str:
     source = "src" if url else "srcdoc"
+    projection = "" if reading is None else f' data-reading-base64="{_b64(reading)}"'
     return (
         f'<div class="generated"><span class="badge">{GENERATED_BADGE}</span>'
         f'<iframe id="{frame_id}" sandbox="{sandbox}" height="{height}" '
-        f'{source}="{_e(document)}"></iframe></div>'
+        f'{source}="{_e(document)}"{projection}></iframe></div>'
     )
 
 
@@ -532,7 +557,13 @@ def _custom(spec: Spec, chart_script: str | None) -> _Built:
         "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:",
         sanitize_html(spec.fields["html"]),
     )
-    return _frame(document, "", spec.fields["height"], "fenric-custom"), _OK
+    return _frame(
+        document,
+        "",
+        spec.fields["height"],
+        "fenric-custom",
+        reading=plain_text(spec.fields["html"]),
+    ), _OK
 
 
 def _chart(spec: Spec, chart_script: str | None) -> _Built:
@@ -602,6 +633,7 @@ def _markdown(spec: Spec, unused: str | None) -> _Built:
         parts.append(
             f'<iframe title="{_e(doc["name"])} — rendered Markdown" tabindex="0" sandbox="" '
             f'data-md-rendered height="{spec.fields["height"]}" srcdoc="{_e(inner)}"'
+            f' data-reading-base64="{_b64(plain_text(doc["rendered"]))}"'
             f"{' hidden' if source_view else ''}></iframe>"
         )
         parts.append(

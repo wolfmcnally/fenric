@@ -106,3 +106,28 @@ def sanitize_html(markup: str) -> str:
     while parser.open:
         parser.out.append(f"</{parser.open.pop()}>")
     return "".join(parser.out)
+
+
+def plain_text(markup: str) -> str:
+    """Project sanitized inert markup to text without reading a content frame."""
+
+    class Text(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__(convert_charrefs=True)
+            self.parts: list[str] = []
+
+        def handle_data(self, data: str) -> None:
+            self.parts.append(data)
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag in {"br", "hr", "td", "th", "li", "p", "div", "pre"} or tag.startswith("h"):
+                self.parts.append("\n")
+
+        def handle_endtag(self, tag: str) -> None:
+            if tag not in {"b", "i", "em", "strong", "span", "code", "abbr", "s", "u"}:
+                self.parts.append("\n")
+
+    parser = Text()
+    parser.feed(sanitize_html(markup))
+    parser.close()
+    return "".join(parser.parts).strip()

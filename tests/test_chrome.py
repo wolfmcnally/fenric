@@ -27,7 +27,8 @@ def policy_of(document: str) -> str:
 def frame_of(document: str) -> tuple[str, str]:
     """Return an inner frame's sandbox value and its unescaped document."""
     found = re.findall(
-        r'<iframe id="fenric-(?:custom|chart)" sandbox="([^"]*)" height="\d+" srcdoc="([^"]*)">',
+        r'<iframe id="fenric-(?:custom|chart)" sandbox="([^"]*)" height="\d+" srcdoc="([^"]*)"'
+        r'(?: data-reading-base64="[^"]*")?>',
         document,
     )
     assert len(found) == 1

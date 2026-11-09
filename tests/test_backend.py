@@ -276,6 +276,7 @@ def test_opening_does_not_activate_or_disable_later_keyboard_focus(
         _show(page())
         assert fake.activation == ["order"]
         assert fake.created["on_top"] is False
+        assert fake.created["text_select"] is True
         assert fake.created["resizable"] is False and "min_size" not in fake.created
         assert fake.created.get("focus", True) is True
         assert fake.browser.shown.is_set()

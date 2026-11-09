@@ -277,6 +277,7 @@ class PywebviewBackend:
                 width=page.width,
                 height=_INITIAL_HEIGHT,
                 resizable=html,
+                text_select=True,
                 **({"min_size": _HTML_MIN_SIZE} if html else {}),
                 on_top=False,
             )

@@ -4,6 +4,11 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+
+- Selected MP4/WebM video with native player controls and authenticated single-range seeking, with a video-specific 64 MiB file cap, unchanged 16 MiB other-file/128 MiB total bounds, immutable snapshots and exact media URL policy. Tiny synthetic H.264/AAC and VP9/Opus fixtures exercise playback without private recordings.
+- Selectable nonsecret dialog text, Select all text and Copy displayed text, plus explicit local-device Speak/Stop controls. Inert custom/Markdown text projections preserve opaque frames; typed answers and secret dialogs are excluded. Missing local speech fails visibly without a remote/default voice fallback.
+
 ## [0.4.0] — 2026-11-01
 
 ### Added
