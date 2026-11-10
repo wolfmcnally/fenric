@@ -54,7 +54,9 @@ fenric/target.py
 [sdist]
 .gitignore
 .python-version
+AGENTS.md
 CHANGELOG.md
+CLAUDE.md
 CONTRIBUTING.md
 LICENSE
 PKG-INFO
