@@ -42,7 +42,7 @@ Keep all private recordings and large audio outside repository/package inputs. T
 
 ## Present selected video
 
-**Requires the unreleased MP4/WebM capability after 0.4.0.** Current installed 0.4.0 rejects video selections; `custom` strips video, and selected HTML blocks external/data/blob media. Do not evade a refused extension or CSP by relabeling files, embedding data media or changing hosting. Verify the exact receiving build before presenting a film; no runtime replacement is implied.
+**Requires Fenric 0.5.0 or later.** Installed 0.4.0 rejects video selections; `custom` strips video, and selected HTML blocks external/data/blob media. Do not evade a refused extension or CSP by relabeling files, embedding data media or changing hosting. Verify the exact receiving build before presenting a film; no runtime replacement is implied.
 
 Prepare a plain local HTML document with `<video controls playsinline preload="metadata" src="review.mp4">Video unavailable.</video>` and select exactly that document and the corresponding MP4 (or WebM). From the source checkout, the [synthetic three-second demo](examples/video-demo/PROVENANCE.md) can be presented with `fenric html --root docs/examples/video-demo --entry index.html --file index.html --file sample.mp4 --title "Selected video preview" --timeout 3600 --remote-status-file "$STATUS_DIR/video-status.json"`. The small public fixture has a moving pattern and tone; it is not a film QA sample. Native controls provide Play, pause, seek and replay; no autoplay is requested. File selection does not prove codec decoding, sound audibility or artistic acceptance.
 

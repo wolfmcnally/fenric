@@ -159,7 +159,7 @@ WAV is served as `audio/wav`; the public audio demo exercises uncompressed PCM16
 
 ## Selected video and local speech
 
-These are unreleased additions after 0.4.0, not capabilities of an existing installed 0.4.0 runtime. Verify exact receiving source/package provenance. No install, public hosting or permission change is implied. If selected HTML refuses video, report it; do not relabel a file or work around the media policy with external/data/blob URLs.
+These additions require 0.5.0 or later, not an existing installed 0.4.0 runtime. Verify exact receiving source/package provenance. No install, public hosting or permission change is implied. If selected HTML refuses video, report it; do not relabel a file or work around the media policy with external/data/blob URLs.
 
 On a supporting runtime, prepare local HTML with `<video controls playsinline preload="metadata" src="review.mp4">Video unavailable.</video>` and select exactly the HTML and the paired MP4/WebM. They use `video/mp4`/`video/webm`, share the aggregate and media-policy bounds above, with a 64 MiB per-video limit, and use the same authenticated immutable range transport. Browser codecs vary; synthetic tests exercise H.264/AAC and VP9/Opus. No transcoding, truncation or film quality judgment is performed. For a longer film obtain a separately labeled complete supported derivative within 64 MiB, retaining provenance; keep private media outside source/package inputs. Use a tracked invocation with `--timeout 3600` and a fresh private remote-status path, deliver its protected URL and real expiry promptly, and collect its terminal result as above.
 

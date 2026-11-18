@@ -126,7 +126,7 @@ fenric --version
 It prints the version:
 
 ```text
-fenric 0.4.0
+fenric 0.5.0
 ```
 
 ## Focus and deliberate keyboard responses
@@ -487,7 +487,7 @@ ok
 
 ### chart
 
-For selected local video, use the bounded `html` surface described in [video previews](media.md#present-selected-video). MP4/WebM support is an unreleased addition after 0.4.0; it does not require the chart toolchain or permit outside media URLs.
+For selected local video, use the bounded `html` surface described in [video previews](media.md#present-selected-video). MP4/WebM support starts in 0.5.0; it does not require the chart toolchain or permit outside media URLs.
 
 Shows a chart drawn by d3 code written in TypeScript. The code is type-checked and compiled before the window opens, and runs against the real DOM with ordinary browser networking and no native filesystem/Python API. Prints `ok`. Charts use the same ordinary DOM/d3 on native and configured remote surfaces, and need `fenric setup-charts` once.
 
@@ -748,7 +748,7 @@ Each browser page uses an opaque request marker. A losing page is told the dialo
 
 ## Select, copy and speak
 
-The unreleased revision after 0.4.0 makes nonsecret displayed text selectable using ordinary mouse/touch selection. Every nonsecret dialog also offers **Select all text**, **Copy displayed text** and **Speak**, with **Stop speaking** during speech. Select all opens a selectable plain-text projection of the visible static content; it does not select input values, hidden documents/branches, buttons or secret controls. Copy reports actual clipboard completion or reveals the selected text for manual copying. It never reads the clipboard. The existing literal Copy text and Markdown Copy source controls retain their exact payloads.
+Fenric 0.5.0 makes nonsecret displayed text selectable using ordinary mouse/touch selection. Every nonsecret dialog also offers **Select all text**, **Copy displayed text** and **Speak**, with **Stop speaking** during speech. Select all opens a selectable plain-text projection of the visible static content; it does not select input values, hidden documents/branches, buttons or secret controls. Copy reports actual clipboard completion or reveals the selected text for manual copying. It never reads the clipboard. The existing literal Copy text and Markdown Copy source controls retain their exact payloads.
 
 Speak reads the current displayed projection in bounded sequential chunks, using only an explicitly selected voice reported as local by the browser. It starts on a trusted click/tap, never automatically, and offers no remote/default voice fallback. A missing API, remote-only inventory, still-empty voice list or speech error is reported visibly; try Speak again once local voices become available, or use the operating system's selection speech controls. No voice, service, microphone permission or credentials are installed or requested. Speak and Copy do not submit an answer; activating the outer controls counts as interaction under the existing timer rules, while the caller's hard lifetime still applies. Speech stops on Stop, document/view changes, settlement/expiry, page hiding and unload.
 

@@ -4,6 +4,8 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-11-18
+
 ### Added
 
 - Network-agnostic HTTP dialogs on trusted networks, each with its own continuously held OS-assigned IPv4 port. Explicit advertised host selection, bearer/Host/Origin/expiry checks and independent concurrent lifecycles require no Tailscale setup; existing HTTPS configuration and admitted native paths stay separate. HTTP browser request markers use `getRandomValues` without requiring a secure context.

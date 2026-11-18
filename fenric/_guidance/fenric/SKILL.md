@@ -15,4 +15,4 @@ Follow the operator's already authorized delivery channel and the applicable sta
 
 For multi-document reading, see **Markdown documents** in the guide. Verify the installed `markdown` capability; use document tabs and rendered/exact-source switching without executing document instructions.
 
-Video and the general Select/Copy/Speak controls are unreleased additions after 0.4.0. Read **Selected video and local speech** in the guide before using them; do not bypass a refused extension/CSP or silently install an update.
+Video and the general Select/Copy/Speak controls require 0.5.0 or later. Read **Selected video and local speech** in the guide before using them; do not bypass a refused extension/CSP or silently install an update.

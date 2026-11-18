@@ -8,7 +8,7 @@ The name comes from *fenestra*, Latin for window. Fenric was written by Wolf McN
 
 Multiline text fields grow and shrink with wrapped input up to ten visible lines, then scroll. Notifications can show literal copyable text with a dedicated Copy button; copying preserves the exact payload and does not acknowledge the dialog. See [command reference](docs/commands.md).
 
-The unreleased revision adds selectable nonsecret text, Select all text, Copy displayed text and local-device Speak/Stop controls, including readable custom and Markdown proposals. It also adds selected MP4/WebM playback with native video controls; see [video previews](docs/media.md#present-selected-video). Installed 0.4.0 lacks these additions: verify source provenance and the receiving runtime before using them. No installation or update is implicit.
+Fenric 0.5.0 adds selectable nonsecret text, Select all text, Copy displayed text and local-device Speak/Stop controls, including readable custom and Markdown proposals. It also adds selected MP4/WebM playback with native video controls and independent ephemeral HTTP dialogs on trusted networks; see [video previews](docs/media.md#present-selected-video) and [network setup](docs/commands.md#remote-access). Installed 0.4.0 lacks these additions: verify source provenance and the receiving runtime before using them. No installation or update is implicit.
 
 Review a [paged gallery of screenshots](docs/examples.md#comment-on-screenshots) with retained per-image comments and a final review. The caller supplies local PNGs and stable IDs; `fenric ask --gallery-file manifest.json` returns comments under those IDs.
 
@@ -29,7 +29,7 @@ uv tool install .
 or from a built wheel:
 
 ```bash
-uv tool install fenric-0.4.0-py3-none-any.whl
+uv tool install fenric-0.5.0-py3-none-any.whl
 ```
 
 or with [pipx](https://pipx.pypa.io/):
