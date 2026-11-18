@@ -1,8 +1,11 @@
-"""Operator-configured, temporary tailnet-only HTTPS dialog transport."""
+"""Operator-configured ephemeral HTTP dialogs on trusted networks."""
 
 from __future__ import annotations
 
+import copy
+import http.client
 import http.server
+import ipaddress
 import json
 import math
 import os
@@ -42,10 +45,12 @@ class RemoteError(RuntimeError):
     """A fixed, value-free reason remote cannot be used."""
 
 
-def config_path() -> Path:
-    return (
-        Path(os.environ.get("FENRIC_CONFIG_DIR", "~/.config/fenric")).expanduser() / "remote.json"
-    )
+def config_path(*, native: bool = False, standalone: bool = False) -> Path:
+    directory = Path(os.environ.get("FENRIC_CONFIG_DIR", "~/.config/fenric")).expanduser()
+    ordinary = directory / "standalone-remote.json"
+    if standalone or (not native and os.path.lexists(ordinary)):
+        return ordinary
+    return directory / "remote.json"
 
 
 def _json(raw: str | bytes) -> Any:
@@ -63,8 +68,8 @@ def _json(raw: str | bytes) -> Any:
     return json.loads(raw, object_pairs_hook=pairs, parse_constant=constant)
 
 
-def read_config() -> dict[str, Any] | None:
-    path = config_path()
+def read_config(*, native: bool = False) -> dict[str, Any] | None:
+    path = config_path(native=native)
     try:
         info = path.lstat()
     except FileNotFoundError:
@@ -84,12 +89,18 @@ def read_config() -> dict[str, Any] | None:
             raise ValueError
         if not value["enabled"] and set(value) == {"enabled"}:
             return value
-        if set(value) != {"enabled", "tailscale", "ports", "grace", "announce"}:
+        direct = value.get("transport") == "http"
+        expected = {"enabled", "grace", "announce"} | (
+            {"transport", "host"} if direct else {"tailscale", "ports"}
+        )
+        if set(value) != expected:
             raise ValueError
-        if not isinstance(value["tailscale"], str) or not Path(value["tailscale"]).is_absolute():
+        if direct:
+            _advertised_host(value["host"])
+        elif not isinstance(value["tailscale"], str) or not Path(value["tailscale"]).is_absolute():
             raise ValueError
-        ports = value["ports"]
-        if (
+        ports = value.get("ports")
+        if not direct and (
             not isinstance(ports, list)
             or len(ports) != 2
             or any(type(port) is not int for port in ports)
@@ -113,8 +124,8 @@ def read_config() -> dict[str, Any] | None:
         raise RemoteError("configuration error") from None
 
 
-def _save(value: dict[str, Any]) -> None:
-    path = config_path()
+def _save(value: dict[str, Any], *, standalone: bool = False) -> None:
+    path = config_path(standalone=standalone)
     scratch: str | None = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -133,7 +144,48 @@ def _save(value: dict[str, Any]) -> None:
 
 
 def off() -> None:
-    _save({"enabled": False})
+    # Ordinary CLI configuration never disables the separately admitted native
+    # route, even when no standalone override existed before this command.
+    _save({"enabled": False}, standalone=True)
+
+
+def _advertised_host(value: Any) -> str:
+    """An operator-selected reachable address/hostname, never a bind wildcard."""
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > 253
+        or value in {"0.0.0.0", "255.255.255.255"}
+        or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-." for c in value)
+        or any(
+            not part or len(part) > 63 or part.startswith("-") or part.endswith("-")
+            for part in value.split(".")
+        )
+    ):
+        raise ValueError
+    final = value.split(".")[-1]
+    if final.isdigit() or final.startswith("0x"):
+        # WHATWG URL parsing treats numeric final labels as IPv4, including
+        # historical integer/octal/hex spellings. Admit only canonical IPv4.
+        address = ipaddress.IPv4Address(value)
+        if str(address) != value or address.is_unspecified or address.is_multicast:
+            raise ValueError
+    return value
+
+
+def _ready_http(transport: Transport, timeout: float) -> bool:
+    """Probe only the held local socket, never DNS or an advertised peer."""
+    connection = http.client.HTTPConnection(
+        "127.0.0.1", transport.server.server_port, timeout=timeout
+    )
+    try:
+        connection.request("GET", transport.path, headers={"Host": transport.authority})
+        response = connection.getresponse()
+        return response.status == 200 and response.getheader("Content-Type", "").startswith(
+            "text/html"
+        )
+    finally:
+        connection.close()
 
 
 def _command(program: str, *args: str, timeout: float) -> Any:
@@ -181,6 +233,7 @@ def _identity(program: str, timeout: float) -> tuple[str, str]:
 
 
 class _Server(http.server.ThreadingHTTPServer):
+    allow_reuse_address = False
     daemon_threads = True
     block_on_close = False
 
@@ -189,10 +242,17 @@ class _Server(http.server.ThreadingHTTPServer):
 
 
 class Transport:
-    """An authenticated loopback endpoint; it never returns submitted values."""
+    """One capability-scoped endpoint; it never returns submitted values."""
 
     def __init__(
-        self, page: Page, session: Session, authority: str, login: str, *, local: bool = False
+        self,
+        page: Page,
+        session: Session,
+        authority: str,
+        login: str | None,
+        *,
+        local: bool = False,
+        direct: bool = False,
     ) -> None:
         self.session = session
         self.token = secrets.token_urlsafe(32)
@@ -267,12 +327,27 @@ class Transport:
                         and self.headers.get_all("Host") == [owner.authority]
                         and not self.headers.get_all("Transfer-Encoding")
                     )
-                expected = {
-                    "Host": authority,
-                    "X-Forwarded-Host": authority,
-                    "X-Forwarded-Proto": "https",
-                    "Tailscale-User-Login": login,
-                }
+                expected = {"Host": owner.authority}
+                if direct:
+                    # A trusted-network bearer link establishes possession,
+                    # not an account identity. Never accept proxy assertions.
+                    if any(
+                        self.headers.get_all(name)
+                        for name in (
+                            "X-Forwarded-Host",
+                            "X-Forwarded-Proto",
+                            "Tailscale-User-Login",
+                        )
+                    ):
+                        return False
+                else:
+                    expected.update(
+                        {
+                            "X-Forwarded-Host": authority,
+                            "X-Forwarded-Proto": "https",
+                            "Tailscale-User-Login": login,
+                        }
+                    )
                 if post:
                     expected.update({"Origin": owner.origin, "Content-Type": "application/json"})
                 markers = self.headers.get_all("Fenric-Request")
@@ -430,9 +505,11 @@ class Transport:
                     value = None
                 self.state_reply()
 
-        self.server = _Server(("127.0.0.1", 0), Handler)
-        if local:
-            self.authority = f"127.0.0.1:{self.server.server_port}"
+        # The very same bound socket listens until close: no release/rebind
+        # interval, Serve interception, fixed public port or shared listener.
+        self.server = _Server(("0.0.0.0" if direct else "127.0.0.1", 0), Handler)
+        if local or direct:
+            self.authority = f"{authority if direct else '127.0.0.1'}:{self.server.server_port}"
             self.origin = "http://" + self.authority
         self.thread = threading.Thread(
             target=lambda: self.server.serve_forever(poll_interval=0.05), daemon=True
@@ -459,11 +536,13 @@ class Remote:
         config: dict[str, Any] | None = None,
         budget: float | None = None,
         private: bool = False,
+        https_only: bool = False,
     ) -> None:
         self.page, self.session = page, session
         self.callback, self.status_file = callback, status_file
-        self.config = config
+        self.config = copy.deepcopy(config)
         self.private = private
+        self.https_only = https_only
         self.desktop_only = desktop_only
         self.budget = SETUP_SECONDS if budget is None else budget
         self.transport: Transport | None = None
@@ -505,16 +584,42 @@ class Remote:
         try:
             if self.desktop_only or os.environ.get("FENRIC_DESKTOP_ONLY") == "1":
                 raise RemoteError("disabled")
-            config = self.config if self.config is not None else read_config()
+            config = (
+                self.config
+                if self.config is not None
+                else read_config(native=self.private or self.https_only)
+            )
             if config is None:
                 raise RemoteError("not configured")
             if not config["enabled"]:
                 raise RemoteError("disabled")
-            host, login = _identity(config["tailscale"], max(0.01, deadline - time.monotonic()))
+            direct = config.get("transport") == "http"
+            if direct:
+                # Bearer links do not establish the principal required by an
+                # admitted native interaction. Keep its qualified path separate.
+                if self.private or self.https_only:
+                    raise RemoteError("surface not admitted")
+                host, login = _advertised_host(config["host"]), None
+            else:
+                host, login = _identity(config["tailscale"], max(0.01, deadline - time.monotonic()))
             if self.private and not self.session.surface_eligible("remote", login):
                 raise RemoteError("surface not admitted")
             if self._stop.is_set() or self.session.done.is_set():
                 raise RemoteError("session ended")
+            if direct:
+                transport = Transport(self.page, self.session, host, login, direct=True)
+                self.transport = transport
+                url = transport.origin + transport.path
+                if not _ready_http(transport, max(0.01, min(0.5, deadline - time.monotonic()))):
+                    raise RemoteError("setup failed")
+                if self._stop.is_set() or self.session.done.is_set():
+                    raise RemoteError("session ended")
+                if time.monotonic() >= deadline:
+                    raise RemoteError("setup failed")
+                self._report(url=url)
+                if not self.private:
+                    self._announcement(config, url)
+                return
             opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             for port in range(config["ports"][0], config["ports"][1] + 1):
                 if self._stop.is_set() or time.monotonic() >= deadline:
@@ -548,8 +653,10 @@ class Remote:
                             if response.status == 200 and response.headers.get(
                                 "Content-Type", ""
                             ).startswith("text/html"):
-                                if self.session.done.is_set():
+                                if self._stop.is_set() or self.session.done.is_set():
                                     raise RemoteError("session ended")
+                                if time.monotonic() >= deadline:
+                                    raise RemoteError("setup failed")
                                 self._report(url=url)
                                 if not self.private:
                                     self._announcement(config, url)
@@ -629,15 +736,25 @@ class Remote:
 def setup(
     *,
     tailscale: str = "tailscale",
-    port_start: int = 8443,
-    port_end: int = 8450,
+    transport: str = "http",
+    host: str | None = None,
+    port_start: int | None = None,
+    port_end: int | None = None,
     grace: float = 3,
     announce: str | None = None,
 ) -> None:
-    program = shutil.which(tailscale)
-    if not program:
+    program = shutil.which(tailscale) if transport == "serve-https" else None
+    if transport == "serve-https" and not program:
         raise RemoteError("tailscale unavailable")
     try:
+        if transport not in {"http", "serve-https"}:
+            raise ValueError
+        if (port_start is None) != (port_end is None):
+            raise ValueError
+        if transport == "http" and port_start is not None:
+            raise ValueError
+        if transport == "serve-https" and host is not None:
+            raise ValueError
         command = shlex.split(announce) if announce else []
         if command:
             executable = shutil.which(command[0])
@@ -646,17 +763,20 @@ def setup(
             command[0] = str(Path(executable).resolve())
         config = {
             "enabled": True,
-            "tailscale": str(Path(program).resolve()),
-            "ports": [port_start, port_end],
             "grace": grace,
             "announce": command,
         }
-        if (
-            not 1024 <= port_start <= port_end <= 65535
-            or port_end - port_start > 31
-            or not math.isfinite(grace)
-            or not 0 <= grace <= 60
+        if transport == "http":
+            config.update(transport="http", host=_advertised_host(host))
+        else:
+            if port_start is None:
+                port_start, port_end = 8443, 8450
+            config.update(tailscale=str(Path(program).resolve()), ports=[port_start, port_end])
+        if transport == "serve-https" and (
+            not 1024 <= port_start <= port_end <= 65535 or port_end - port_start > 31
         ):
+            raise ValueError
+        if not math.isfinite(grace) or not 0 <= grace <= 60:
             raise ValueError
     except (ValueError, OSError):
         raise RemoteError("configuration error") from None
@@ -664,11 +784,11 @@ def setup(
     page = Page("Fenric setup", "<!doctype html><title>Fenric setup</title>", None, 520)
     probe = Remote(page, session, config=dict(config, announce=[]), budget=PROBE_SECONDS)
     probe.start()
-    # Setup deliberately verifies HTTPS before writing enabled configuration.
+    # Verify the owned listener before saving. Off-host reachability is separate.
     deadline = time.monotonic() + PROBE_SECONDS + 1
     while probe.status is None and time.monotonic() < deadline:
         time.sleep(0.05)
     probe.close()
     if not probe.status or probe.status["status"] != "available":
         raise RemoteError(probe.status["reason"] if probe.status else "setup failed")
-    _save(config)
+    _save(config, standalone=True)

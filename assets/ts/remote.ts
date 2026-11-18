@@ -3,7 +3,14 @@ export {};
 type RemoteState = { touched: boolean; remaining: number | null; status: string | null; settled_elsewhere: boolean };
 type RemoteWindow = Window & { fenric: { touched: boolean; done: object | null }; fenricSync: (shared: RemoteState) => void };
 const remoteWindow = window as unknown as RemoteWindow;
-const requestMarker = crypto.randomUUID();
+// randomUUID requires a secure context; trusted-network HTTP still provides
+// getRandomValues. Keep the same canonical version-4 marker on both transports.
+const markerBytes = crypto.getRandomValues(new Uint8Array(16));
+markerBytes[6] = (markerBytes[6] & 0x0f) | 0x40;
+markerBytes[8] = (markerBytes[8] & 0x3f) | 0x80;
+const requestMarker = Array.from(markerBytes, (byte, index) =>
+  ([4, 6, 8, 10].includes(index) ? "-" : "") + byte.toString(16).padStart(2, "0")
+).join("");
 const base = location.pathname.replace(/\/$/, "");
 let ended = false;
 let reportedTouch = false;

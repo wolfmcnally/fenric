@@ -5,6 +5,7 @@ from __future__ import annotations
 import http.client
 import json
 import os
+import select
 import shlex
 import signal
 import subprocess
@@ -32,6 +33,318 @@ PROJECT = Path(__file__).resolve().parents[1]
 LOGIN, HOST = "operator@example.com", "host.tail123.ts.net"
 SENTINEL = "private-value-DO-NOT-ECHO"
 CONFIRM = {"verb": "confirm", "message": "Proceed?"}
+
+
+@pytest.fixture
+def trusted_http(monkeypatch):
+    """Exercise direct HTTP with real sockets restricted to loopback in tests."""
+    original = remote._Server
+    binds = []
+
+    def listener(address, handler):
+        binds.append(address)
+        assert address == ("0.0.0.0", 0)
+        return original(("127.0.0.1", 0), handler)
+
+    def unexpected(*args, **kwargs):
+        pytest.fail("direct HTTP must not run Tailscale or another subprocess")
+
+    monkeypatch.setattr(remote, "_Server", listener)
+    monkeypatch.setattr(remote.subprocess, "Popen", unexpected)
+    monkeypatch.setattr(remote, "TERMINAL_SECONDS", 0)
+    config = {"enabled": True, "transport": "http", "host": "127.0.0.1", "grace": 0, "announce": []}
+    return config, binds
+
+
+def direct_request(transport, **options):
+    method = options.get("method", "GET")
+    headers = [("Host", transport.authority)]
+    if method == "POST":
+        options.setdefault("path", transport.path + "/action")
+        headers += [
+            ("Origin", transport.origin),
+            ("Content-Type", "application/json"),
+            ("Fenric-Request", str(uuid.uuid4())),
+            ("Content-Length", str(len(json.dumps(options["action"]).encode()))),
+        ]
+    return request(transport, headers=options.pop("headers", headers), **options)
+
+
+def test_direct_http_overlap_and_independent_settlement(trusted_http):
+    config, binds = trusted_http
+    opened = []
+    try:
+        for name in ("First", "Second", "Third", "Fourth"):
+            session = Session(60, lambda value: value, lambda value: "ok")
+            instance = remote.Remote(
+                build_page(validate_spec(dict(CONFIRM, title=name)), remote=True),
+                session,
+                config=config,
+            )
+            opened.append(instance)
+            instance.start()
+        wait_for(lambda: all(instance.status is not None for instance in opened))
+        assert all(instance.status["status"] == "available" for instance in opened)
+        endpoints = [instance.transport for instance in opened]
+        assert len({endpoint.server.server_port for endpoint in endpoints}) == 4
+        assert binds == [("0.0.0.0", 0)] * 4
+        for name, endpoint in zip(("First", "Second", "Third", "Fourth"), endpoints):
+            assert name.encode() in direct_request(endpoint)[1]
+        selected = opened[-1]
+        assert (
+            direct_request(selected.transport, method="POST", action={"kind": "cancel"})[0] == 200
+        )
+        assert selected.session.done.is_set()
+        selected.close()
+        opened.pop()
+        assert all(direct_request(instance.transport)[0] == 200 for instance in opened)
+    finally:
+        for instance in opened:
+            instance.close()
+
+
+def test_direct_http_capability_host_origin_and_proxy_headers(trusted_http):
+    config, _ = trusted_http
+    answers = []
+
+    def finish(value):
+        answers.append(value)
+        return "ok"
+
+    session = Session(60, lambda value: value, finish)
+    instance = remote.Remote(
+        build_page(validate_spec(CONFIRM), remote=True), session, config=config
+    )
+    instance.start()
+    try:
+        wait_for(lambda: instance.status is not None)
+        endpoint = instance.transport
+        assert direct_request(endpoint)[0] == 200
+        assert direct_request(endpoint, path="/wrong-capability")[0] == 403
+        assert direct_request(endpoint, headers=[("Host", "other.example:1234")])[0] == 403
+        assert (
+            direct_request(
+                endpoint, headers=[("Host", endpoint.authority), ("Tailscale-User-Login", LOGIN)]
+            )[0]
+            == 403
+        )
+        assert request(endpoint)[0] == 403  # Legacy proxy headers are not direct authentication.
+        bad = [
+            ("Host", endpoint.authority),
+            ("Origin", "http://other.example"),
+            ("Content-Type", "application/json"),
+            ("Fenric-Request", str(uuid.uuid4())),
+            ("Content-Length", "18"),
+        ]
+        assert (
+            direct_request(endpoint, method="POST", action={"kind": "cancel"}, headers=bad)[0]
+            == 403
+        )
+        assert not session.done.is_set()
+        submitted = {"kind": "submit", "payload": {"answer": SENTINEL}}
+        assert direct_request(endpoint, method="POST", action=submitted)[0] == 200
+        status, body, _ = direct_request(endpoint, method="POST", action=submitted)
+        assert status == 200 and SENTINEL.encode() not in body
+        assert answers == [{"answer": SENTINEL}]
+        assert session.done.is_set()
+    finally:
+        instance.close()
+
+
+def test_direct_http_setup_has_no_tailscale_dependency_or_port_range(trusted_http):
+    config, _ = trusted_http
+    assert main(["remote", "setup", "--host", "127.0.0.1", "--grace", "0"]) == 0
+    assert remote.read_config() == config
+    before = remote.config_path().read_bytes()
+    for flags in (
+        ["--port-start", "8443"],
+        ["--port-end", "8450"],
+        ["--port-start", "8443", "--port-end", "8450"],
+    ):
+        assert main(["remote", "setup", "--host", "127.0.0.1", *flags]) == 3
+        assert remote.config_path().read_bytes() == before
+
+    for host in (
+        "0.0.0.0",
+        "0",
+        "00.0.0.0",
+        "2130706433",
+        "host.123",
+        "999.999.999.999",
+        "https://example.com",
+        "a:42",
+        "bad\nhost",
+        "",
+    ):
+        with pytest.raises(remote.RemoteError, match="configuration error"):
+            remote.setup(host=host)
+        assert remote.config_path().read_bytes() == before
+
+
+def test_standalone_http_setup_preserves_native_config(tailnet, trusted_http):
+    _, native_config = tailnet
+    original = remote.config_path(native=True).read_bytes()
+    remote.off()
+    assert remote.read_config() == {"enabled": False}
+    assert remote.read_config(native=True) == native_config
+    assert remote.config_path(native=True).read_bytes() == original
+    assert main(["remote", "setup", "--host", "127.0.0.1", "--grace", "0"]) == 0
+    assert remote.config_path().name == "standalone-remote.json"
+    assert remote.read_config()["transport"] == "http"
+    assert remote.read_config(native=True) == native_config
+    assert remote.config_path(native=True).read_bytes() == original
+    remote.off()
+    assert remote.read_config() == {"enabled": False}
+    assert remote.read_config(native=True) == native_config
+    assert remote.config_path(native=True).read_bytes() == original
+
+
+@pytest.mark.parametrize("restriction", [{"private": True}, {"https_only": True}])
+def test_direct_http_cannot_supply_integrated_principal(trusted_http, restriction):
+    config, binds = trusted_http
+    session = Session(60, lambda value: value, lambda value: "ok")
+    instance = remote.Remote(
+        build_page(validate_spec(CONFIRM)), session, config=config, **restriction
+    )
+    instance.start()
+    try:
+        wait_for(lambda: instance.status is not None)
+        assert instance.status == {
+            "status": "unavailable",
+            "url": None,
+            "reason": "surface not admitted",
+        }
+        assert binds == []
+    finally:
+        instance.close()
+
+
+def test_direct_http_modeled_hosts_keep_distinct_authorities(trusted_http):
+    first = remote.Transport(
+        build_page(validate_spec(dict(CONFIRM, title="First host")), remote=True),
+        Session(60, lambda value: value, lambda value: "ok"),
+        "first.example",
+        None,
+        direct=True,
+    )
+    second = remote.Transport(
+        build_page(validate_spec(dict(CONFIRM, title="Second host")), remote=True),
+        Session(60, lambda value: value, lambda value: "ok"),
+        "second.example",
+        None,
+        direct=True,
+    )
+    try:
+        # Separate kernels may allocate the same numeric port. Model their
+        # advertised authorities while routing to two real loopback sockets.
+        first.authority, first.origin = "first.example:55000", "http://first.example:55000"
+        second.authority, second.origin = "second.example:55000", "http://second.example:55000"
+        assert b"First host" in direct_request(first)[1]
+        assert b"Second host" in direct_request(second)[1]
+        assert direct_request(first, headers=[("Host", second.authority)])[0] == 403
+        assert direct_request(first, path=second.path)[0] == 403
+        first.close()
+        assert direct_request(second)[0] == 200
+    finally:
+        if first.thread.is_alive():
+            first.close()
+        second.close()
+
+
+def test_direct_http_does_not_publish_after_startup_deadline(trusted_http, monkeypatch):
+    config, _ = trusted_http
+
+    def slow_probe(*args, **kwargs):
+        time.sleep(0.08)
+        return True
+
+    monkeypatch.setattr(remote, "_ready_http", slow_probe)
+    instance = remote.Remote(
+        build_page(validate_spec(CONFIRM)),
+        Session(60, lambda value: value, lambda value: "ok"),
+        config=config,
+        budget=0.05,
+    )
+    instance.start()
+    try:
+        wait_for(lambda: instance.status is not None)
+        assert instance.status == {"status": "unavailable", "url": None, "reason": "setup failed"}
+    finally:
+        instance.close()
+    assert instance.transport is None
+
+
+def test_direct_http_readiness_never_contacts_advertised_host(trusted_http, monkeypatch):
+    config, _ = trusted_http
+    config["host"] = "phone-only.invalid"
+    original = remote.http.client.HTTPConnection
+    connections = []
+
+    def connection(host, port, **options):
+        assert host == "127.0.0.1"
+        connections.append((host, port))
+        return original(host, port, **options)
+
+    monkeypatch.setattr(remote.http.client, "HTTPConnection", connection)
+    instance = remote.Remote(
+        build_page(validate_spec(CONFIRM)), Session(60, lambda v: v, lambda v: "ok"), config=config
+    )
+    instance.start()
+    try:
+        wait_for(lambda: instance.status is not None)
+        assert instance.status["status"] == "available"
+        assert connections == [("127.0.0.1", instance.transport.server.server_port)]
+        assert instance.status["url"].startswith("http://phone-only.invalid:")
+    finally:
+        instance.close()
+
+
+def test_direct_http_process_death_releases_only_its_socket(tmp_path):
+    script = tmp_path / "direct-child.py"
+    script.write_text(
+        "import time\nfrom fenric import remote\nfrom fenric.chrome import build_page\n"
+        "from fenric.spec import validate_spec\nfrom fenric.session import Session\n"
+        "original=remote._Server\n"
+        "remote._Server=lambda address,handler: original(('127.0.0.1',0),handler)\n"
+        "transport=remote.Transport(build_page(validate_spec({'verb':'notify','message':'child'})),"
+        "Session(60,lambda v:v,lambda v:'ok'),'127.0.0.1',None,direct=True)\n"
+        "print(transport.server.server_port,flush=True)\nwhile True: time.sleep(.1)\n"
+    )
+    child = subprocess.Popen(
+        [sys.executable, str(script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={**os.environ, "PYTHONPATH": str(PROJECT)},
+    )
+    survivor = remote.Transport(
+        build_page(validate_spec(CONFIRM)),
+        Session(60, lambda v: v, lambda v: "ok"),
+        "",
+        "",
+        local=True,
+    )
+    try:
+        assert child.stdout is not None
+        ready, _, _ = select.select([child.stdout], [], [], 3)
+        assert ready, "child did not report its listener within three seconds"
+        port = int(child.stdout.readline())
+        child.terminate()
+        assert child.wait(timeout=3) != 0
+        with pytest.raises(OSError):
+            urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+                f"http://127.0.0.1:{port}", timeout=0.2
+            )
+        assert (
+            request(survivor, path="/not-an-asset", headers=[("Host", survivor.authority)])[0]
+            == 403
+        )
+    finally:
+        survivor.close()
+        if child.poll() is None:
+            child.terminate()
+            child.wait(timeout=3)
+        child.stdout.close()
+        child.stderr.close()
 
 
 def wait_for(predicate, seconds: float = 3) -> None:
@@ -940,6 +1253,7 @@ def test_machine_config_and_failures_report_once_without_blocking_desktop(
     assert run(CONFIRM, backend=submits("yes"), remote_status=statuses.append).value is True
     assert statuses[0]["reason"] == "disabled" and not (directory / "calls").exists()
     remote.config_path().unlink()
+    remote.config_path(native=True).unlink()
     statuses.clear()
     assert run(CONFIRM, backend=submits("yes"), remote_status=statuses.append).value is True
     assert statuses[0]["reason"] == "not configured" and not (directory / "calls").exists()
@@ -983,7 +1297,21 @@ def test_machine_config_and_failures_report_once_without_blocking_desktop(
     assert run(CONFIRM, backend=AwaitStatus(), remote_status=statuses.append).value is True
     assert len(statuses) == 1 and statuses[0]["reason"] == "tailscale unavailable"
     remote._save(config)
-    assert main(["remote", "setup", "--tailscale", config["tailscale"], "--grace", "0"]) == 0
+    assert (
+        main(
+            [
+                "remote",
+                "setup",
+                "--transport",
+                "serve-https",
+                "--tailscale",
+                config["tailscale"],
+                "--grace",
+                "0",
+            ]
+        )
+        == 0
+    )
     assert remote.config_path().stat().st_mode & 0o777 == 0o600
     assert main(["remote", "off"]) == 0 and remote.read_config() == {"enabled": False}
     remote.config_path().write_text('{"enabled":true,"enabled":false}')

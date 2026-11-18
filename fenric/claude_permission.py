@@ -21,6 +21,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 LIFETIME_SECONDS = 900
 MIN_DELIVERY_SECONDS = 600
@@ -140,9 +141,12 @@ def _collect(request: _Request, config: dict[str, Any]) -> bool:
     from fenric.remote import _identity, read_config
 
     try:
-        remote_config = read_config()
+        remote_config = read_config(native=True)
         _require(
-            remote_config is not None and remote_config["enabled"] and not remote_config["announce"]
+            remote_config is not None
+            and remote_config.get("transport") != "http"
+            and remote_config["enabled"]
+            and not remote_config["announce"]
         )
         before_identity = _identity(remote_config["tailscale"], 5)
         _require(before_identity[1] == config["expected_remote_login"])
@@ -211,6 +215,23 @@ def _collect(request: _Request, config: dict[str, Any]) -> bool:
             failed = True
             cancel.set()
             return
+        try:
+            url = urlsplit(status["url"])
+            _require(
+                url.scheme == "https"
+                and url.hostname == before_identity[0]
+                and url.port is not None
+                and remote_config["ports"][0] <= url.port <= remote_config["ports"][1]
+                and url.netloc == f"{before_identity[0]}:{url.port}"
+                and url.path.startswith("/")
+                and len(url.path) > 1
+                and not url.query
+                and not url.fragment
+            )
+        except Exception:
+            failed = True
+            cancel.set()
+            return
         relay_started = True
         payload = {
             "schema": "fenric.permission-availability.v1",
@@ -242,7 +263,12 @@ def _collect(request: _Request, config: dict[str, Any]) -> bool:
     try:
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             result = run(
-                spec, backend=ObservingBackend(), remote_status=availability, cancel=cancel
+                spec,
+                backend=ObservingBackend(),
+                remote_status=availability,
+                cancel=cancel,
+                _remote_config=remote_config,
+                _https_only=True,
             )
         if request.remaining() <= 0 or os.getppid() != parent or (failed and relay_started):
             return False
@@ -263,6 +289,7 @@ def _collect(request: _Request, config: dict[str, Any]) -> bool:
             and request.remaining() > 0
             and os.getppid() == parent
             and before_identity == after_identity
+            and read_config(native=True) == remote_config
             and remote_won
             and result.status == "ok"
             and result.value == {"decision": "allow"}

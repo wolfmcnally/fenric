@@ -72,7 +72,9 @@ EXTERNAL = {
     "uv tool install .": "clean tool install from the project directory",
     f"uv tool install fenric-{VERSION}-py3-none-any.whl": "clean tool install of the built wheel",
     "pipx install .": "clean pipx install from the project directory",
-    "fenric remote setup": "bounded tailnet HTTPS/owner-header probe observed outside the gate",
+    "fenric remote setup --host 192.0.2.10": (
+        "operator-selected trusted-network listener setup; no real settings in this gate"
+    ),
     "fenric setup-charts": "provisioning the chart toolchain with Bun and the network",
 }
 

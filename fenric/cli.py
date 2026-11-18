@@ -190,12 +190,14 @@ def build_parser() -> argparse.ArgumentParser:
         allow_abbrev=False,
         help="Provision the chart toolchain into the per-user cache. Prints ok.",
     )
-    machine = verbs.add_parser("remote", allow_abbrev=False, help="Configure the tailnet surface.")
+    machine = verbs.add_parser("remote", allow_abbrev=False, help="Configure the network surface.")
     commands = machine.add_subparsers(dest="remote_command", required=True)
     configure = commands.add_parser("setup", allow_abbrev=False)
     configure.add_argument("--tailscale", default="tailscale")
-    configure.add_argument("--port-start", type=int, default=8443)
-    configure.add_argument("--port-end", type=int, default=8450)
+    configure.add_argument("--transport", choices=("http", "serve-https"), default="http")
+    configure.add_argument("--host")
+    configure.add_argument("--port-start", type=int)
+    configure.add_argument("--port-end", type=int)
     configure.add_argument("--grace", type=float, default=3)
     configure.add_argument("--announce")
     commands.add_parser("status", allow_abbrev=False)
@@ -283,6 +285,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 if args.remote_command == "setup":
                     remote.setup(
                         tailscale=args.tailscale,
+                        transport=args.transport,
+                        host=args.host,
                         port_start=args.port_start,
                         port_end=args.port_end,
                         grace=args.grace,

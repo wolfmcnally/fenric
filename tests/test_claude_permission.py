@@ -90,11 +90,15 @@ def collect_case(
         observations if observations is not None else {"sessions": [], "relays": [], "submits": []}
     )
     identity = iter(
-        [("node", "synthetic-owner"), ("changed" if case == "drift" else "node", "synthetic-owner")]
+        [
+            ("synthetic.invalid", "synthetic-owner"),
+            ("changed" if case == "drift" else "synthetic.invalid", "synthetic-owner"),
+        ]
     )
-    monkeypatch.setattr(
-        remote, "read_config", lambda: {"enabled": True, "announce": [], "tailscale": "synthetic"}
-    )
+    configuration = [
+        {"enabled": True, "announce": [], "tailscale": "synthetic", "ports": [8443, 8450]}
+    ]
+    monkeypatch.setattr(remote, "read_config", lambda **kwargs: configuration[0])
     monkeypatch.setattr(remote, "_identity", lambda *args: next(identity))
     marker = "desktop" if case == "desktop" else str(uuid.uuid4())
 
@@ -109,12 +113,27 @@ def collect_case(
     class SyntheticRemote:
         def __init__(self, page, session, *, callback=None, **kwargs):
             self.callback = callback
+            assert kwargs["https_only"] is True
+            assert kwargs["config"]["ports"] == [8443, 8450]
+            if case == "config-replaced":
+                configuration[0] = {
+                    "enabled": True,
+                    "transport": "http",
+                    "host": "127.0.0.1",
+                    "grace": 0,
+                    "announce": [],
+                }
 
         def start(self):
+            selected_url = {
+                "http-url": "http://synthetic.invalid:8443/private",
+                "wrong-host": "https://other.invalid:8443/private",
+                "wrong-port": "https://synthetic.invalid:9000/private",
+            }.get(case, "https://synthetic.invalid:8443/private")
             self.callback(
                 {"status": "unavailable", "url": None}
                 if case == "remote-unavailable"
-                else {"status": "available", "url": "https://synthetic.invalid/private"}
+                else {"status": "available", "url": selected_url}
             )
 
         def close(self):
@@ -151,6 +170,34 @@ def collect_case(
     return result, observations
 
 
+def test_hook_refuses_direct_mode_and_config_replacement(tmp_path, monkeypatch):
+    _, settings = config(tmp_path)
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            remote,
+            "read_config",
+            lambda **kwargs: {
+                "enabled": True,
+                "transport": "http",
+                "host": "127.0.0.1",
+                "grace": 0,
+                "announce": [],
+            },
+        )
+        with pytest.raises(hook._Unavailable):
+            hook._collect(request(event("/example/project")), settings)
+    with monkeypatch.context() as patch:
+        allowed, seen = collect_case(
+            patch, settings, request(event("/example/project")), case="config-replaced"
+        )
+        assert allowed is False
+        assert len(seen["relays"]) == 1
+    for case in ("http-url", "wrong-host", "wrong-port"):
+        with monkeypatch.context() as patch:
+            with pytest.raises(hook._Unavailable):
+                collect_case(patch, settings, request(event("/example/project")), case=case)
+
+
 def test_real_sequential_sessions_and_minimal_relay(tmp_path, monkeypatch):
     _, settings = config(tmp_path)
     previous = None
@@ -174,7 +221,7 @@ def test_real_sequential_sessions_and_minimal_relay(tmp_path, monkeypatch):
             "native_session_id": "native-session",
             "host_label": "Synthetic host",
             "expires_at_ms": retained.expires_at_ms,
-            "url": "https://synthetic.invalid/private",
+            "url": "https://synthetic.invalid:8443/private",
         }
         assert argv == settings["relay_command"]
         assert kwargs["timeout"] == 10
@@ -227,18 +274,20 @@ def test_immutable_deadlines_and_precollection_unavailability(tmp_path, monkeypa
         assert seen["relays"] == []
     with monkeypatch.context() as patch:
         patch.setattr(
-            remote, "read_config", lambda: {"enabled": True, "announce": ["already-configured"]}
+            remote,
+            "read_config",
+            lambda **kwargs: {"enabled": True, "announce": ["already-configured"]},
         )
         with pytest.raises(ValueError):
             hook._collect(request(event()), settings)
     for config_value in [None, {"enabled": False}]:
         with monkeypatch.context() as patch:
-            patch.setattr(remote, "read_config", lambda: config_value)
+            patch.setattr(remote, "read_config", lambda **kwargs: config_value)
             with pytest.raises(ValueError):
                 hook._collect(request(event()), settings)
     with monkeypatch.context() as patch:
 
-        def broken_config():
+        def broken_config(**kwargs):
             raise remote.RemoteError("synthetic private detail")
 
         patch.setattr(remote, "read_config", broken_config)

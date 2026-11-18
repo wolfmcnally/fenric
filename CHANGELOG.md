@@ -6,8 +6,14 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 
 ### Added
 
+- Network-agnostic HTTP dialogs on trusted networks, each with its own continuously held OS-assigned IPv4 port. Explicit advertised host selection, bearer/Host/Origin/expiry checks and independent concurrent lifecycles require no Tailscale setup; existing HTTPS configuration and admitted native paths stay separate. HTTP browser request markers use `getRandomValues` without requiring a secure context.
+
 - Selected MP4/WebM video with native player controls and authenticated single-range seeking, with a video-specific 64 MiB file cap, unchanged 16 MiB other-file/128 MiB total bounds, immutable snapshots and exact media URL policy. Tiny synthetic H.264/AAC and VP9/Opus fixtures exercise playback without private recordings.
 - Selectable nonsecret dialog text, Select all text and Copy displayed text, plus explicit local-device Speak/Stop controls. Inert custom/Markdown text projections preserve opaque frames; typed answers and secret dialogs are excluded. Missing local speech fails visibly without a remote/default voice fallback.
+
+### Fixed
+
+- Startup no longer publishes a late successful readiness probe after its deadline. Direct readiness checks only the owned local socket, and the native Bash permission hook pins and rechecks its admitted HTTPS configuration across concurrent settings changes.
 
 ## [0.4.0] — 2026-11-01
 

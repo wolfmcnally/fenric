@@ -20,6 +20,7 @@ import time
 import uuid
 from collections.abc import Callable
 from pathlib import Path
+from urllib.parse import urlsplit
 
 TEST_COMMAND = "/usr/bin/printf 'FENRIC CLAUDE BASH TEST\\n'"
 
@@ -262,8 +263,8 @@ def collect_phone(retained: dict, scope: dict) -> dict:
     relay = scope["relay_command"]
     require(type(relay) is list and relay and all(type(part) is str for part in relay))
     require(Path(relay[0]).is_absolute() and Path(relay[0]).is_file())
-    config = read_config()
-    require(config is not None and config["enabled"])
+    config = read_config(native=True)
+    require(config is not None and config["enabled"] and config.get("transport") != "http")
     before_identity = _identity(config["tailscale"], 5)
     require(before_identity[1] == scope["expected_remote_login"], "identity")
     cancel = threading.Event()
@@ -294,6 +295,16 @@ def collect_phone(retained: dict, scope: dict) -> dict:
             cancel.set()
             return
         try:
+            parsed = urlsplit(status["url"])
+            require(
+                parsed.scheme == "https"
+                and parsed.hostname == before_identity[0]
+                and parsed.port is not None
+                and config["ports"][0] <= parsed.port <= config["ports"][1]
+                and parsed.netloc == f"{before_identity[0]}:{parsed.port}"
+                and not parsed.query
+                and not parsed.fragment
+            )
             # Relay command is per-test owner configuration, not a product dependency.
             result = subprocess.run(
                 relay,
@@ -336,9 +347,12 @@ def collect_phone(retained: dict, scope: dict) -> dict:
                 backend=ObservingBackend(),
                 remote_status=availability,
                 cancel=cancel,
+                _remote_config=config,
+                _https_only=True,
             )
         after_identity = _identity(config["tailscale"], 5)
         require(before_identity == after_identity, "identity")
+        require(read_config(native=True) == config, "identity")
         require(session_holder)
         # Version-bound test observation: installed Session records desktop or validated
         # remote request marker. This is not a new public Fenric provenance API.

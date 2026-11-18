@@ -32,13 +32,13 @@ Reobserve lifecycle inventory and review a new data-only skill plan. Existing `g
 
 For passive skills, inspect `fenric lifecycle plan --scope global --remove` (select the actual scope and target roots). It proposes only intact owned skill removal and performs nothing. An identical manual copy without ownership remains unowned; preserve local edits and use the selected harness's separately authorized manual removal procedure. Skill removal does not uninstall the application or edit constitutional files.
 
-If you want managed guidance removed, preview and apply its [owned-block removal](setup.md#removal-and-recovery) before uninstalling the command. Unowned or modified prose needs explicit review. To disable configured phone access while the command is still installed, the operator can run:
+If you want managed guidance removed, preview and apply its [owned-block removal](setup.md#removal-and-recovery) before uninstalling the command. Unowned or modified prose needs explicit review. To disable standalone phone access while the command is still installed, the operator can run:
 
 ```bash
 fenric remote off
 ```
 
-That changes Fenric's enabled configuration, not unrelated Tailscale mappings, grants or login. It does not revoke a response that already settled. Let live interactions terminate before removing their software.
+That disables the standalone network surface through `standalone-remote.json`; it preserves the separate `remote.json` used by admitted native integrations, along with unrelated Tailscale mappings, grants and login. It does not revoke a response that already settled. Removing or disabling an installed native hook remains its own explicit lifecycle action. Let live interactions terminate before removing their software.
 
 Use the manager that owns the installation:
 

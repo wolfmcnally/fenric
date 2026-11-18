@@ -23,6 +23,69 @@ from fenric.spec import VERBS
 Open = Callable[..., Dialog]
 
 
+def test_trusted_network_http_submits_without_secure_context(browser: Browser, monkeypatch) -> None:
+    """Exercise the production page and HTTP handler at a non-local HTTP origin."""
+    import uuid
+    from urllib.parse import urlsplit
+
+    from fenric import remote
+    from fenric.session import Session
+    from fenric.spec import validate_spec
+
+    original = remote._Server
+
+    def loopback(address, handler):
+        assert address == ("0.0.0.0", 0)
+        return original(("127.0.0.1", 0), handler)
+
+    monkeypatch.setattr(remote, "_Server", loopback)
+    spec = validate_spec({"verb": "confirm", "message": "HTTP submission", "timeout": 60})
+    answers = []
+
+    def finish(value):
+        answers.append(value)
+        return "ok"
+
+    session = Session(60, lambda value: validate_result(spec, value), finish)
+    transport = remote.Transport(
+        build_page(spec, remote=True), session, "dialog.example", None, direct=True
+    )
+    context = browser.new_context()
+    errors, markers = [], []
+    page = context.new_page()
+    page.on("pageerror", lambda error: errors.append(str(error)))
+
+    def proxy(route):
+        incoming = route.request
+        parsed = urlsplit(incoming.url)
+        assert parsed.netloc == transport.authority
+        if marker := incoming.headers.get("fenric-request"):
+            assert str(uuid.UUID(marker)) == marker and uuid.UUID(marker).version == 4
+            markers.append(marker)
+        response = route.fetch(
+            url=f"http://127.0.0.1:{transport.server.server_port}" + parsed.path,
+            headers={**incoming.headers, "Host": transport.authority},
+        )
+        route.fulfill(response=response)
+
+    context.route(transport.origin + "/**", proxy)
+    try:
+        page.goto(transport.origin + transport.path)
+        assert page.evaluate("window.isSecureContext") is False
+        assert page.evaluate("typeof crypto.randomUUID") == "undefined"
+        page.locator("[data-read-copy]").click()
+        expect(page.locator("[data-read-status]")).to_contain_text("Copy unavailable")
+        assert "HTTP submission" in page.evaluate("getSelection().toString()")
+        page.get_by_role("button", name="Yes", exact=True).click()
+        expect(page.locator("body")).to_contain_text("Sent!")
+        assert session.done.is_set() and answers == [True]
+        assert markers and len(set(markers)) == 1
+        assert errors == []
+    finally:
+        close_proxy_context(context)
+        transport.close()
+
+
 def test_proxy_only_translates_fetch_failure_after_owned_removal() -> None:
     from threading import Event
     from types import SimpleNamespace

@@ -95,7 +95,7 @@ positional arguments:
                         channel.
     setup-charts        Provision the chart toolchain into the per-user cache.
                         Prints ok.
-    remote              Configure the tailnet surface.
+    remote              Configure the network surface.
     guidance            Read agent usage guidance or review instruction setup.
     lifecycle           Inspect installation and propose a read-only skill
                         lifecycle plan.
@@ -693,17 +693,21 @@ Choosing **green** prints `green`. With an invalid spec, `result.status` is `err
 
 ### remote
 
-The operator enables a temporary phone surface once with `fenric remote setup`. This requires Tailscale on the receiving computer and phone, signed into the same owner account, and tailnet HTTPS enabled. Certificate hostnames enter the public Certificate Transparency ledger. Setup verifies HTTPS using an owned temporary Serve probe before saving enabled configuration; it opens no public route. No spec or ordinary request can enable remote. `fenric remote status` reports configuration and `fenric remote off` disables it.
+The operator enables a temporary network surface with `fenric remote setup --host RECEIVING_HOST_OR_IP`, selecting a real reachable IPv4 address or hostname for links. Each standalone dialog binds its own IPv4 HTTP listener to `0.0.0.0:0` and retains that socket until settlement and cleanup. The OS assigns its port; simultaneous dialogs have distinct ports on a host, and each host allocates independently. The URL contains the selected host, assigned port and fresh capability, never `0.0.0.0`. Tailscale is optional. Binding listens on all reachable IPv4 interfaces, including an installed tailnet interface; routing and existing firewall rules determine actual access. Setup checks the owned listener locally, not off-host reachability, before saving configuration. It changes no firewall, ACL or router setting. No spec or ordinary request can enable remote. `fenric remote status` reports configuration and `fenric remote off` disables it.
 
 ```bash
-fenric remote setup
+fenric remote setup --host 192.0.2.10
 ```
 
-Setup accepts `--tailscale` (executable, resolved and recorded), `--port-start` and `--port-end` (inclusive range, default 8443–8450), `--grace` (announcement grace, default 3 seconds) and `--announce` (command split without a shell). Configuration is owner-only `~/.config/fenric/remote.json`, overridable with `FENRIC_CONFIG_DIR`. The announcement command receives only the URL on stdin; output is discarded. It runs after grace only before actual interaction or settlement. Fenric chooses no notification tool.
+Use a trusted network: HTTP content, answers and bearer URLs are plaintext on its network path. Possession of the capability authorizes a standalone response; it does not identify an account or physical person. Exact Host and POST Origin, request markers, response schemas, shared expiry and one-use settlement remain checked. Browser secure-context features such as clipboard APIs may be unavailable over HTTP; manual selection/copy remains available. No certificate, login system or Tailscale dependency is introduced.
 
-Enabled dialogs open on desktop and at a temporary tailnet-only HTTPS URL, including dynamic charts. One early stderr line is `fenric: remote: <HTTPS URL>` or `fenric: remote: unavailable: <reason>`. The optional JSON status file and library callback contain `status`, `url` and `reason`. Reasons are `not configured`, `disabled`, `configuration error`, `headless`, `tailscale unavailable`, `tailnet unavailable`, `HTTPS unavailable`, `owner unavailable`, `ports unavailable`, `setup failed` and `session ended`. Standard output remains the one result line. Remote failure never fails the desktop dialog. `--desktop-only`, `FENRIC_DESKTOP_ONLY=1` and the library override may only disable remote.
+Setup defaults to `--transport http` and requires `--host`. The example address is illustrative; select the receiving host's actual address. `--grace` controls announcement delay (default 3 seconds); `--announce` is split without a shell and receives only the URL on stdin, with output discarded. It runs after grace only before actual interaction or settlement. Setup writes owner-only `~/.config/fenric/standalone-remote.json`; `FENRIC_CONFIG_DIR` overrides the containing directory. Standalone dialogs prefer that file and otherwise read the existing `remote.json`. Fenric chooses no notification tool.
 
-Both surfaces share one clock and first settlement. Visiting, leaving, backgrounding or reloading leaves the ring running. Blank-space taps, scrolling, focus alone, modifier/navigation keys and interrupted gestures do not cancel it. Activating an enabled dialog control (including an answer field or disclosure) or editing an answer cancels the countdown on both surfaces and leaves a solid subdued ring labeled “Timeout canceled”, also on later visits. Chart frame interaction retains its touch/cancel behavior and shows the same subdued ring. The server hard deadline still applies; explicit Cancel, Escape and native close still cancel the dialog itself. SIGINT/SIGTERM cancel the caller's pending dialog. Each session owns its listener, port and foreground Serve child; parent death stops its child too, without resetting other mappings. Following settlement a bounded 0.5-second terminal acknowledgement window permits retries to receive the recorded outcome before the address disappears. Responses never carry answers. Invalid remote submissions do not settle; a valid sink failure settles error once.
+Existing saved tailnet HTTPS configuration in `remote.json` stays byte-for-byte unchanged. Integrated interactions and native permission hooks read only that file; standalone setup and `remote off` never edit or disable it. With no standalone override, ordinary dialogs retain their prior behavior. `--transport serve-https` selects the legacy Tailscale executable and inclusive 8443–8450 default range for standalone use; an explicit range requires both `--port-start` and `--port-end`. Those flags are rejected for HTTP. Standalone bearer links supply no independently authenticated principal and do not migrate or qualify native approval integrations.
+
+Enabled dialogs open on desktop and at a temporary HTTP URL (or the saved legacy HTTPS route), including dynamic charts. One early stderr line is `fenric: remote: <URL>` or `fenric: remote: unavailable: <reason>`. The optional JSON status file and library callback contain `status`, `url` and `reason`. Reasons are `not configured`, `disabled`, `configuration error`, `headless`, `tailscale unavailable`, `tailnet unavailable`, `HTTPS unavailable`, `owner unavailable`, `ports unavailable`, `setup failed`, `surface not admitted` and `session ended`. Standard output remains the one result line. Remote failure never fails the desktop dialog. `--desktop-only`, `FENRIC_DESKTOP_ONLY=1` and the library override may only disable remote.
+
+Both surfaces share one clock and first settlement. Visiting, leaving, backgrounding or reloading leaves the ring running. Blank-space taps, scrolling, focus alone, modifier/navigation keys and interrupted gestures do not cancel it. Activating an enabled dialog control (including an answer field or disclosure) or editing an answer cancels the countdown on both surfaces and leaves a solid subdued ring labeled “Timeout canceled”, also on later visits. Chart frame interaction retains its touch/cancel behavior and shows the same subdued ring. The server hard deadline still applies; explicit Cancel, Escape and native close still cancel the dialog itself. SIGINT/SIGTERM cancel the caller's pending dialog. Each session owns its listener and port; legacy HTTPS also owns a foreground Serve child. Process death releases the direct listener, and the legacy guard stops only its child without resetting other mappings. Following settlement a bounded 0.5-second terminal acknowledgement window permits retries to receive the recorded outcome before the address disappears. Responses never carry answers. Invalid remote submissions do not settle; a valid sink failure settles error once.
 
 Every secret dialog shows FILE or COMMAND, receiving host and destination. Open the destination line by touch or keyboard for full path/existence/format/keys, or resolved executable/arguments. A changed file resolution writes nothing. `store_label` is caller content, not Fenric's claim about where a command stores a value.
 
@@ -713,8 +717,10 @@ The library adds `desktop_only=False`, `remote_status=None`, `status_file=None` 
 
 | Option | Meaning |
 |---|---|
-| `--tailscale` | Tailscale executable resolved at setup. |
-| `--port-start` | First permitted HTTPS port, at least 1024. |
+| `--transport` | `http` (default) or legacy `serve-https`. |
+| `--host` | Reachable IPv4 address or lowercase ASCII hostname for HTTP links; required for HTTP. |
+| `--tailscale` | Tailscale executable resolved only for `serve-https`. |
+| `--port-start` | Legacy HTTPS only, at least 1024; supply with `--port-end`. |
 | `--port-end` | Last permitted port, at most 65535; range at most 32 ports. |
 | `--grace` | Announcement grace seconds, from 0 through 60. |
 | `--announce` | Optional notification command; no shell, URL on stdin. |

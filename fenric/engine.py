@@ -117,6 +117,8 @@ def run(
     status_file: str | os.PathLike[str] | None = None,
     cancel: threading.Event | None = None,
     _interaction: Interaction | None = None,
+    _remote_config: dict[str, Any] | None = None,
+    _https_only: bool = False,
 ) -> Result:
     """Show the dialog ``spec`` describes and return what the person answered.
 
@@ -206,6 +208,8 @@ def run(
         callback=_interaction.availability if _interaction else remote_status,
         status_file=status_file,
         private=_interaction is not None,
+        config=_remote_config,
+        https_only=_https_only,
     )
     if os.environ.get(HEADLESS_ENV) == "1":
         if _interaction is not None:

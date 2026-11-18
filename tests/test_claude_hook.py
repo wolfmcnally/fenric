@@ -257,7 +257,7 @@ def test_hook_process_boundary(hook, monkeypatch, capsys):
 
 
 def test_phone_collection_uses_real_session(hook, monkeypatch):
-    identity = ("node", "synthetic-owner")
+    identity = ("synthetic.invalid", "synthetic-owner")
     for case in [
         "allow",
         "deny",
@@ -274,9 +274,18 @@ def test_phone_collection_uses_real_session(hook, monkeypatch):
         with request_case(hook) as (_, scope, event), monkeypatch.context() as patch:
             scope.update(relay_command=[sys.executable], expected_remote_login="synthetic-owner")
             identities = iter(
-                [identity, ("node", "changed-owner") if case == "identity-drift" else identity]
+                [
+                    identity,
+                    ("synthetic.invalid", "changed-owner")
+                    if case == "identity-drift"
+                    else identity,
+                ]
             )
-            patch.setattr(remote, "read_config", lambda: {"enabled": True, "tailscale": "unused"})
+            patch.setattr(
+                remote,
+                "read_config",
+                lambda **kwargs: {"enabled": True, "tailscale": "unused", "ports": [8443, 8443]},
+            )
             patch.setattr(remote, "_identity", lambda *a: next(identities))
             if case == "foreign-account":
                 scope["expected_remote_login"] = "foreign"
@@ -306,12 +315,17 @@ def test_phone_collection_uses_real_session(hook, monkeypatch):
                 def __init__(self, page, session, *, callback=None, **kwargs):
                     self.callback = callback
                     self.session = session
+                    assert kwargs["https_only"] is True
+                    assert kwargs["config"]["ports"] == [8443, 8443]
 
                 def start(self):
                     self.callback(
                         {"status": "unavailable", "url": None, "reason": "not configured"}
                         if case == "unavailable"
-                        else {"status": "available", "url": "https://synthetic.invalid/capability"}
+                        else {
+                            "status": "available",
+                            "url": "https://synthetic.invalid:8443/capability",
+                        }
                     )
 
                 def close(self):
@@ -348,7 +362,7 @@ def test_phone_collection_uses_real_session(hook, monkeypatch):
                 assert len(relays) == (0 if case == "unavailable" else 1)
                 assert sessions[0].done.is_set()
                 if relays:
-                    assert relays[0][1]["input"] == b"https://synthetic.invalid/capability"
+                    assert relays[0][1]["input"] == b"https://synthetic.invalid:8443/capability"
                     assert relays[0][1]["stdout"] == subprocess.DEVNULL
                     assert relays[0][1]["stderr"] == subprocess.DEVNULL
                 if case.startswith("relay-") or case == "unavailable":
