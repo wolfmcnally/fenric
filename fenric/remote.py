@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import copy
+import ctypes
 import http.client
 import http.server
 import ipaddress
 import json
 import math
 import os
+import re
 import secrets
 import shlex
 import shutil
@@ -39,10 +41,141 @@ ANNOUNCE_SECONDS = 5.0
 TERMINAL_SECONDS = 0.5
 MAX_BODY = 65536
 MAX_CONFIG = 16384
+FIREWALL_TOOL = "/usr/libexec/ApplicationFirewall/socketfilterfw"
 
 
 class RemoteError(RuntimeError):
     """A fixed, value-free reason remote cannot be used."""
+
+
+def _kernel_executable() -> str:
+    """Identify this macOS process, including interpreter launchers/symlinks."""
+    library = ctypes.CDLL("/usr/lib/libproc.dylib")
+    query = library.proc_pidpath
+    query.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32)
+    query.restype = ctypes.c_int
+    buffer = ctypes.create_string_buffer(4096)
+    if query(os.getpid(), buffer, len(buffer)) <= 0:
+        raise OSError
+    return os.path.realpath(buffer.value.decode("utf-8"))
+
+
+def _application_identifier() -> str | None:
+    """Read this process's actual bundle identity, never infer one from its name."""
+    library = ctypes.CDLL("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
+    library.CFBundleGetMainBundle.restype = ctypes.c_void_p
+    library.CFBundleGetIdentifier.argtypes = (ctypes.c_void_p,)
+    library.CFBundleGetIdentifier.restype = ctypes.c_void_p
+    library.CFStringGetCString.argtypes = (
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_long,
+        ctypes.c_uint32,
+    )
+    library.CFStringGetCString.restype = ctypes.c_bool
+    bundle = library.CFBundleGetMainBundle()
+    if not bundle:
+        return None
+    identifier = library.CFBundleGetIdentifier(bundle)
+    if not identifier:
+        return None
+    buffer = ctypes.create_string_buffer(1024)
+    if not library.CFStringGetCString(identifier, buffer, len(buffer), 0x08000100):
+        raise OSError
+    return buffer.value.decode("utf-8")
+
+
+def _firewall_text(option: str, deadline: float) -> str:
+    if option not in {"--getglobalstate", "--getblockall", "--listapps"}:
+        raise ValueError
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise OSError
+    result = subprocess.run(
+        [FIREWALL_TOOL, option],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        timeout=min(1, remaining),
+        check=False,
+    )
+    if result.returncode or len(result.stdout) > 1 << 20:
+        raise OSError
+    return result.stdout.decode("ascii").strip()
+
+
+def incoming_permission(*, timeout: float = 2) -> dict[str, Any]:
+    """Read-only point-in-time macOS preflight, never a peer-reachability proof.
+
+    An explicit allow or disabled firewall is known locally. An unregistered
+    app may cause a hidden prompt, even if a local socket probe succeeds.
+    """
+    result = {
+        "platform": sys.platform,
+        "executable": None,
+        "application_identifier": None,
+        "state": "unknown",
+        "reason": "inspection-unavailable",
+        "reachability": "unverified",
+    }
+    if sys.platform != "darwin":
+        result.update(
+            executable=os.path.realpath(sys.executable),
+            state="not-applicable",
+            reason="macos-preflight-not-applied",
+        )
+        return result
+    deadline = time.monotonic() + timeout
+    # Identity is best-effort; failure must not hide an independently known
+    # global block or discard a usable path when only the bundle lookup fails.
+    for field, query in (
+        ("executable", _kernel_executable),
+        ("application_identifier", _application_identifier),
+    ):
+        try:
+            result[field] = query()
+        except (OSError, ValueError, UnicodeError, AttributeError):
+            pass
+    executable = result["executable"]
+    application = result["application_identifier"]
+    try:
+        state = _firewall_text("--getglobalstate", deadline)
+        if state == "Firewall is disabled. (State = 0)":
+            result.update(state="allowed", reason="firewall-disabled")
+            return result
+        if state not in {"Firewall is enabled. (State = 1)", "Firewall is enabled. (State = 2)"}:
+            return result
+        blocking = _firewall_text("--getblockall", deadline)
+        if blocking == "Firewall has block all state set to enabled.":
+            result.update(state="blocked", reason="block-all")
+            return result
+        if blocking != "Firewall has block all state set to disabled.":
+            return result
+        lines = _firewall_text("--listapps", deadline).splitlines()
+        # An absent registration is distinct from a failed/malformed query.
+        header = re.fullmatch(r"Total number of apps = (\d+)", lines[0].strip()) if lines else None
+        entries = [re.fullmatch(r"\d+ : (.+?)\s*", line.strip()) for line in lines]
+        if header is None or sum(entry is not None for entry in entries) != int(header[1]):
+            return result
+        observations = []
+        for index, match in enumerate(entries):
+            if match and (
+                (match[1].startswith("/") and os.path.realpath(match[1]) == executable)
+                or (application is not None and match[1] == application)
+            ):
+                observed = lines[index + 1].strip() if index + 1 < len(lines) else ""
+                observations.append(observed)
+        if observations:
+            if set(observations) == {"(Allow incoming connections)"}:
+                result.update(state="allowed", reason="application-allowed")
+            elif set(observations) == {"(Block incoming connections)"}:
+                result.update(state="blocked", reason="application-blocked")
+            return result
+        if executable is not None or application is not None:
+            result.update(state="unregistered", reason="application-unregistered")
+    except (OSError, ValueError, UnicodeError, AttributeError, subprocess.TimeoutExpired):
+        pass
+    return result
 
 
 def config_path(*, native: bool = False, standalone: bool = False) -> Path:
@@ -555,7 +688,13 @@ class Remote:
     def start(self) -> None:
         self._thread.start()
 
-    def _report(self, reason: str | None = None, url: str | None = None) -> None:
+    def _report(
+        self,
+        reason: str | None = None,
+        url: str | None = None,
+        *,
+        readiness: dict[str, str] | None = None,
+    ) -> None:
         if self.status is not None:
             return
         self.status = {
@@ -563,11 +702,15 @@ class Remote:
             "url": url,
             "reason": reason,
         }
+        if readiness is not None:
+            self.status["readiness"] = dict(readiness)
         if not self.private:
             print(
                 "fenric: remote: " + (url or "unavailable: " + (reason or "setup failed")),
                 file=sys.stderr,
             )
+            if url and reason:
+                print("fenric: remote: warning: " + reason, file=sys.stderr)
         if self.status_file is not None and not self.private:
             try:
                 Path(self.status_file).write_text(json.dumps(self.status) + "\n", encoding="utf-8")
@@ -599,6 +742,11 @@ class Remote:
                 # admitted native interaction. Keep its qualified path separate.
                 if self.private or self.https_only:
                     raise RemoteError("surface not admitted")
+                permission = incoming_permission(timeout=max(0.01, deadline - time.monotonic()))
+                if permission["state"] == "blocked":
+                    raise RemoteError("incoming connections blocked; run fenric remote check")
+                if time.monotonic() >= deadline:
+                    raise RemoteError("setup failed")
                 host, login = _advertised_host(config["host"]), None
             else:
                 host, login = _identity(config["tailscale"], max(0.01, deadline - time.monotonic()))
@@ -616,7 +764,21 @@ class Remote:
                     raise RemoteError("session ended")
                 if time.monotonic() >= deadline:
                     raise RemoteError("setup failed")
-                self._report(url=url)
+                uncertain = permission["state"] not in {"allowed", "not-applicable"}
+                self._report(
+                    url=url,
+                    reason=(
+                        "incoming permission unverified; check the receiving screen "
+                        "and run fenric remote check"
+                        if uncertain
+                        else None
+                    ),
+                    readiness={
+                        "scope": "local-listener",
+                        "incoming_permission": permission["state"],
+                        "peer_reachability": "unverified",
+                    },
+                )
                 if not self.private:
                     self._announcement(config, url)
                 return

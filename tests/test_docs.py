@@ -75,6 +75,7 @@ EXTERNAL = {
     "fenric remote setup --host 192.0.2.10": (
         "operator-selected trusted-network listener setup; no real settings in this gate"
     ),
+    "fenric remote check": "host-dependent read-only check; data and exits proved with fixtures",
     "fenric setup-charts": "provisioning the chart toolchain with Bun and the network",
 }
 

@@ -35,6 +35,184 @@ SENTINEL = "private-value-DO-NOT-ECHO"
 CONFIRM = {"verb": "confirm", "message": "Proceed?"}
 
 
+@pytest.mark.parametrize(
+    "global_state,block_all,apps,expected",
+    [
+        ("Firewall is disabled. (State = 0)", "", "", "allowed"),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to enabled.",
+            "",
+            "blocked",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1 \n0 : /example/python3.11 \n (Allow incoming connections)",
+            "allowed",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1\n0 : org.python.python\n (Allow incoming connections)",
+            "allowed",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1\n0 : /example/python3.11\n (Block incoming connections)",
+            "blocked",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 0",
+            "unregistered",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1\n0 : /other/application\n (Allow incoming connections)",
+            "unregistered",
+        ),
+        ("unrecognized global result", "", "", "unknown"),
+        ("Firewall is enabled. (State = 1)", "unrecognized block result", "", "unknown"),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "",
+            "unknown",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1",
+            "unknown",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 1\n0 : /example/python3.11",
+            "unknown",
+        ),
+        (
+            "Firewall is enabled. (State = 1)",
+            "Firewall has block all state set to disabled.",
+            "Total number of apps = 2\n0 : /example/python3.11\n (Allow incoming connections)\n"
+            "1 : /example/python3.11\n (Block incoming connections)",
+            "unknown",
+        ),
+    ],
+)
+def test_macos_incoming_preflight_distinguishes_permission_states(
+    monkeypatch, global_state, block_all, apps, expected
+):
+    monkeypatch.setattr(remote.sys, "platform", "darwin")
+    monkeypatch.setattr(remote, "_kernel_executable", lambda: "/example/python3.11")
+    monkeypatch.setattr(remote, "_application_identifier", lambda: "org.python.python")
+    output = {"--getglobalstate": global_state, "--getblockall": block_all, "--listapps": apps}
+    calls = []
+
+    def query(option, deadline):
+        calls.append(option)
+        assert deadline > time.monotonic()
+        return output[option]
+
+    monkeypatch.setattr(remote, "_firewall_text", query)
+    observed = remote.incoming_permission()
+    assert observed["state"] == expected
+    assert observed["reachability"] == "unverified"
+    assert observed["executable"] == "/example/python3.11"
+    assert set(calls) <= {"--getglobalstate", "--getblockall", "--listapps"}
+
+
+def test_incoming_preflight_errors_and_nonmacos_are_not_allow_claims(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise OSError("synthetic private error")
+
+    monkeypatch.setattr(remote.sys, "platform", "darwin")
+    monkeypatch.setattr(remote, "_kernel_executable", unavailable)
+    monkeypatch.setattr(remote, "_application_identifier", lambda: None)
+    monkeypatch.setattr(remote, "_firewall_text", unavailable)
+    assert remote.incoming_permission()["state"] == "unknown"
+    monkeypatch.setattr(remote, "_kernel_executable", lambda: "/example/python3.11")
+    monkeypatch.setattr(remote, "_firewall_text", unavailable)
+    observed = remote.incoming_permission()
+    assert observed["state"] == "unknown" and "private" not in json.dumps(observed)
+    monkeypatch.setattr(remote.sys, "platform", "linux")
+    assert remote.incoming_permission()["state"] == "not-applicable"
+    assert remote.incoming_permission()["reachability"] == "unverified"
+
+
+@pytest.mark.parametrize("failed", ["_kernel_executable", "_application_identifier"])
+def test_global_block_survives_identity_failure(monkeypatch, failed):
+    monkeypatch.setattr(remote.sys, "platform", "darwin")
+    monkeypatch.setattr(remote, "_kernel_executable", lambda: "/example/python3.11")
+    monkeypatch.setattr(remote, "_application_identifier", lambda: None)
+
+    def unavailable():
+        raise OSError
+
+    monkeypatch.setattr(remote, failed, unavailable)
+    output = {
+        "--getglobalstate": "Firewall is enabled. (State = 1)",
+        "--getblockall": "Firewall has block all state set to enabled.",
+    }
+    monkeypatch.setattr(remote, "_firewall_text", lambda option, deadline: output[option])
+    assert remote.incoming_permission()["reason"] == "block-all"
+
+
+def test_exact_path_registration_survives_bundle_failure(monkeypatch):
+    monkeypatch.setattr(remote.sys, "platform", "darwin")
+    monkeypatch.setattr(remote, "_kernel_executable", lambda: "/example/python3.11")
+
+    def unavailable():
+        raise OSError
+
+    monkeypatch.setattr(remote, "_application_identifier", unavailable)
+    output = {
+        "--getglobalstate": "Firewall is enabled. (State = 1)",
+        "--getblockall": "Firewall has block all state set to disabled.",
+        "--listapps": "Total number of apps = 1\n0 : /example/python3.11\n"
+        " (Allow incoming connections)",
+    }
+    monkeypatch.setattr(remote, "_firewall_text", lambda option, deadline: output[option])
+    observed = remote.incoming_permission()
+    assert observed["state"] == "allowed" and observed["application_identifier"] is None
+
+
+def test_firewall_queries_are_readonly_bounded_and_refuse_errors(monkeypatch):
+    from types import SimpleNamespace
+
+    def run_query(arguments, **options):
+        assert arguments[0] == remote.FIREWALL_TOOL
+        assert arguments[1] in {"--getglobalstate", "--getblockall", "--listapps"}
+        assert 0 < options["timeout"] <= 1
+        return SimpleNamespace(returncode=0, stdout=b"test result\n")
+
+    monkeypatch.setattr(remote.subprocess, "run", run_query)
+    with pytest.raises(ValueError):
+        remote._firewall_text("--setglobalstate", time.monotonic() + 2)
+    assert remote._firewall_text("--getglobalstate", time.monotonic() + 2) == "test result"
+    with pytest.raises(OSError):
+        remote._firewall_text("--getglobalstate", time.monotonic() - 1)
+    monkeypatch.setattr(
+        remote.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=1, stdout=b"")
+    )
+    with pytest.raises(OSError):
+        remote._firewall_text("--getglobalstate", time.monotonic() + 2)
+
+
+@pytest.mark.parametrize(
+    "state", ["allowed", "blocked", "unregistered", "unknown", "not-applicable"]
+)
+def test_remote_check_is_data_only_and_has_meaningful_exit(monkeypatch, capsys, state):
+    result = {"state": state, "executable": "/example/python3.11", "reachability": "unverified"}
+    monkeypatch.setattr(remote, "incoming_permission", lambda: result)
+    assert main(["remote", "check"]) == (0 if state in {"allowed", "not-applicable"} else 4)
+    assert json.loads(capsys.readouterr().out) == result
+
+
 @pytest.fixture
 def trusted_http(monkeypatch):
     """Exercise direct HTTP with real sockets restricted to loopback in tests."""
@@ -51,9 +229,38 @@ def trusted_http(monkeypatch):
 
     monkeypatch.setattr(remote, "_Server", listener)
     monkeypatch.setattr(remote.subprocess, "Popen", unexpected)
+    monkeypatch.setattr(remote, "incoming_permission", lambda **kwargs: {"state": "allowed"})
     monkeypatch.setattr(remote, "TERMINAL_SECONDS", 0)
     config = {"enabled": True, "transport": "http", "host": "127.0.0.1", "grace": 0, "announce": []}
     return config, binds
+
+
+@pytest.mark.parametrize("state", ["blocked", "unregistered", "unknown"])
+def test_direct_http_distinguishes_block_from_unverified_readiness(
+    trusted_http, monkeypatch, state
+):
+    config, binds = trusted_http
+    monkeypatch.setattr(remote, "incoming_permission", lambda **kwargs: {"state": state})
+    instance = remote.Remote(
+        build_page(validate_spec(CONFIRM)), Session(60, lambda v: v, lambda v: "ok"), config=config
+    )
+    instance.start()
+    try:
+        wait_for(lambda: instance.status is not None)
+        assert "fenric remote check" in instance.status["reason"]
+        if state == "blocked":
+            assert instance.status["status"] == "unavailable" and instance.status["url"] is None
+            assert binds == []
+        else:
+            assert instance.status["status"] == "available" and instance.status["url"]
+            assert instance.status["readiness"] == {
+                "scope": "local-listener",
+                "incoming_permission": state,
+                "peer_reachability": "unverified",
+            }
+            assert binds == [("0.0.0.0", 0)]
+    finally:
+        instance.close()
 
 
 def direct_request(transport, **options):

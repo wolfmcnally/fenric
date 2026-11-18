@@ -201,6 +201,7 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--grace", type=float, default=3)
     configure.add_argument("--announce")
     commands.add_parser("status", allow_abbrev=False)
+    commands.add_parser("check", allow_abbrev=False)
     commands.add_parser("off", allow_abbrev=False)
     guidance_parser = verbs.add_parser(
         "guidance",
@@ -296,6 +297,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 elif args.remote_command == "off":
                     remote.off()
                     print("ok")
+                elif args.remote_command == "check":
+                    result = remote.incoming_permission()
+                    print(json.dumps(result, separators=(",", ":")))
+                    return EXIT_OK if result["state"] in {"allowed", "not-applicable"} else 4
                 else:
                     config = remote.read_config()
                     print(json.dumps(config or {"enabled": False}, separators=(",", ":")))

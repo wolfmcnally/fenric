@@ -16,6 +16,7 @@ All notable changes to Fenric are recorded here. The format follows [Keep a Chan
 ### Fixed
 
 - Startup no longer publishes a late successful readiness probe after its deadline. Direct readiness checks only the owned local socket, and the native Bash permission hook pins and rechecks its admitted HTTPS configuration across concurrent settings changes.
+- macOS HTTP startup checks incoming-network permission read-only before binding. Known blocks refuse; uncertain inspection produces actionable warnings and explicit local-only readiness without falsely blocking a working setup. `remote check` reports the actual interpreter and distinguishes local permission from peer reachability. No firewall setting is changed.
 
 ## [0.4.0] — 2026-11-01
 
