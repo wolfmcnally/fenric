@@ -629,6 +629,15 @@
       "with": ""
     }
   },
+  "pytest:tests/test_test_governance.py::test_parallel_pytest_keeps_coverage_isolation_and_failure_truth": {
+    "defect": "The synthetic parallel fixture requires three ready markers from two workers, so the parallel run under the real supervisor fails and the contract assertion must report it.",
+    "expect": "AssertionError: PARALLEL CONTRACT FAILED",
+    "plant": {
+      "path": "tests/test_test_governance.py",
+      "replace": "    assert len(list(ROOT.glob(\"ready-*\"))) == 2, \"PARALLEL WORK WAS SERIALIZED\"",
+      "with": "    assert len(list(ROOT.glob(\"ready-*\"))) == 3, \"PARALLEL WORK WAS SERIALIZED\""
+    }
+  },
   "pytest:tests/test_test_governance.py::test_reuse_runs_only_what_changed_since_a_proven_tree_and_everything_when_unsure": {
     "defect": "Have the reuse lane select no family whatever changed",
     "expect": "REUSE SKIPPED AN AFFECTED FAMILY OR RERAN AN UNAFFECTED ONE",
