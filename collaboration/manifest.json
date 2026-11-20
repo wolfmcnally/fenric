@@ -1,6 +1,6 @@
 {
   "active_imports": [],
-  "adopted": false,
+  "adopted": true,
   "format": "starter.multioperator.v1",
   "historical_plans": {},
   "mode": "retrofit",
