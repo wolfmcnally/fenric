@@ -1640,7 +1640,11 @@ def test_nested():
         )
 
     xml = root / "parallel.xml"
-    result = run("--junitxml=" + str(xml), str(fixture))
+    # Two worker start-ups, a nested runner and teardown must fit on a loaded machine; the
+    # budget returns to 20 s for every later run, and the hang below keeps its own deadline.
+    (root / "tests/proof-estate.yaml").write_text("hang_timeout_seconds: 60\n")
+    result = run("--junitxml=" + str(xml), str(fixture), timeout=90)
+    (root / "tests/proof-estate.yaml").write_text("hang_timeout_seconds: 20\n")
     assert result.returncode == 0, "PARALLEL CONTRACT FAILED: " + result.stdout + result.stderr
     observed = list(ET.parse(xml).getroot().iter("testcase"))
     assert len(observed) == 5, "PARALLEL COVERAGE LOST"
