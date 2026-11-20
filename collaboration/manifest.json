@@ -1,0 +1,13 @@
+{
+  "active_imports": [],
+  "adopted": false,
+  "format": "starter.multioperator.v1",
+  "historical_plans": {},
+  "mode": "retrofit",
+  "original_log_bytes": 0,
+  "original_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "phase_mapping": {},
+  "source_archive_sha256": "8c3ae603f9cdeef85d8033d3ff4848f70a531b634c14b95ff8d000a9d9e6f294",
+  "source_commit": "36dcfb814be38ea67ef0739f9e885072b1b9fa84",
+  "writer": "fenric-maintainer"
+}

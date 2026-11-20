@@ -27,3 +27,19 @@ gallery/
 
 # Local agent review and execution evidence must never ship.
 /.kickoff/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Agentic harness runtime state
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+.claude/projects/
+.codex/cache/
+
+# Generated collaboration views; never authoritative.
+/.collaboration-views/

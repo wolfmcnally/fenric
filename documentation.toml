@@ -1,0 +1,18 @@
+[tools]
+mdbook = "0.4.50"
+admonish = "1.19.0"
+rust = "1.91.1"
+
+[book]
+directory = "manual"
+
+[preview]
+port = 3017
+# An existing, owner-approved Tailnet proxy URL may be supplied to `serve --url`.
+
+[deploy]
+# No publication target is configured; `docs deploy` refuses until the owner sets one.
+repository = ""
+release_branch = "master"
+workflow = "docs-pages.yml"
+url = ""

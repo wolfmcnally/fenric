@@ -1,0 +1,1320 @@
+# Fenric's proof estate. Generated at methodology adoption on 2026-11-20 from this
+# repository's own inventory; every family, selector, tier and risk judgment here is
+# local. Governed by policies/test-suite-governance.md.
+# Validate with ./bin/test-governance validate.
+schema: agentic.proof_estate.v5
+baseline_report: reports/test-governance/fenric-pre-reset-baseline.json
+audit_ledger: reports/test-governance/fenric-reset.jsonl
+witness_ledger: reports/test-governance/fenric-witnesses.jsonl
+witness_failure_lines: ^E\s
+adoption:
+  mode: bounded
+  reason: Adopted 2026-11-20 with every inherited and product proof frozen as baseline and pending review.
+    Review in bounded batches on a concrete signal, starting with the remote-setup family whose fixture
+    clock failed under machine load at adoption, then the methodology families when the methodology next
+    changes.
+hang_timeout_seconds: 1800
+mutation:
+  tool: null
+  reason: No qualification run has been requested. cosmic-ray is locked as a development dependency so
+    an operator-requested survey can run; until one kills a caught fault and reports a missed one, the
+    estate reports mutation as unmeasured.
+critical_risks:
+  custody:
+    state: applicable
+    direct_proof: pytest:tests/test_check_receipt.py::test_passed_run_is_durable_and_reusable_for_exact_clean_head
+  security:
+    state: applicable
+    direct_proof: pytest:tests/test_security.py::test_no_failure_path_leaks_a_sentinel
+  authority:
+    state: applicable
+    direct_proof: pytest:tests/test_kickoff_evidence.py::test_change_manifest_is_candidate_bound_and_detects_authority_drift
+  concurrency:
+    state: applicable
+    direct_proof: pytest:tests/test_execution_telemetry.py::test_concurrent_process_mutations_do_not_lose_spans
+  atomicity:
+    state: applicable
+    direct_proof: pytest:tests/test_target.py::test_a_failure_at_any_step_leaves_the_target_whole_and_no_temporary_file
+  corruption:
+    state: applicable
+    direct_proof: pytest:tests/test_kickoff_evidence.py::test_validate_detects_corrupt_evidence
+  recovery:
+    state: applicable
+    direct_proof: pytest:tests/test_execution_telemetry.py::test_lifecycle_idempotency_finalization_and_crash_recovery
+  public-contract:
+    state: applicable
+    direct_proof: pytest:tests/test_cli.py::test_a_collecting_verb_prints_json_and_a_showing_verb_prints_ok
+  schema:
+    state: applicable
+    direct_proof: pytest:tests/test_test_governance.py::test_live_reset_validates
+  core-success:
+    state: applicable
+    direct_proof: pytest:tests/test_check.py::test_all_is_default_locked_ordered_and_cwd_independent
+  deploy:
+    state: applicable
+    direct_proof: pytest:tests/test_documentation.py::test_deploy_binds_clean_latest_release_and_preserves_manual_mode
+families:
+- id: fenric-assets
+  kind: pytest
+  selectors:
+  - tests/test_assets.py
+  source_paths:
+  - tests/test_assets.py
+  covers: &id001
+  - fenric/**
+  - tests/**
+  - docs/**
+  - assets/**
+  - preview/**
+  - README.md
+  - pyproject.toml
+  - uv.lock
+  - .python-version
+  - package.py
+  - package-inventory.txt
+  - build_assets.py
+  - package.json
+  - bun.lock
+  - tsconfig.json
+  - LICENSE
+  - CHANGELOG.md
+  - SECURITY.md
+  contract: The committed bundles belong to a recorded build of the current sources.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_assets.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-backend
+  kind: pytest
+  selectors:
+  - tests/test_backend.py
+  source_paths:
+  - tests/test_backend.py
+  covers: *id001
+  contract: The real backend, driven without a window through a stand-in web view module.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_backend.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-charts
+  kind: pytest
+  selectors:
+  - tests/test_charts.py
+  source_paths:
+  - tests/test_charts.py
+  covers: *id001
+  contract: The chart toolchain, driven through a controlled stand-in for Bun.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_charts.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check
+  kind: pytest
+  selectors:
+  - tests/test_check.py
+  source_paths:
+  - tests/test_check.py
+  covers: &id002
+  - bin/**
+  - lib/**
+  - tests/**
+  - .githooks/**
+  - .claude/**
+  - .agents/**
+  - .codex/**
+  - policies/**
+  - briefs/**
+  - plan/**
+  - log/**
+  - collaboration/**
+  - reports/**
+  - reference/**
+  - manual/**
+  - lessons/**
+  - lessons-archived/**
+  - user-actions/**
+  - user-actions-archived/**
+  - AGENTS.md
+  - kickoff.yaml
+  - candidate-partition.yaml
+  - documentation.toml
+  - pyproject.toml
+  - uv.lock
+  - .python-version
+  - .gitignore
+  - .gitattributes
+  contract: The methodology behavior exercised by tests/test_check.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-catalogs
+  kind: pytest
+  selectors:
+  - tests/test_check_catalogs.py
+  source_paths:
+  - tests/test_check_catalogs.py
+  covers: *id002
+  contract: Behavioral tests for deterministic catalog fitness enforcement.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_catalogs.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-hooks-installed
+  kind: pytest
+  selectors:
+  - tests/test_check_hooks_installed.py
+  source_paths:
+  - tests/test_check_hooks_installed.py
+  covers: *id002
+  contract: Behavioral tests for the opt-in-aware hook-liveness witness.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_hooks_installed.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-plan-concreteness
+  kind: pytest
+  selectors:
+  - tests/test_check_plan_concreteness.py
+  source_paths:
+  - tests/test_check_plan_concreteness.py
+  covers: *id002
+  contract: Behavioral tests for bin/check-plan-concreteness.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_plan_concreteness.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-plan-delivery
+  kind: pytest
+  selectors:
+  - tests/test_check_plan_delivery.py
+  source_paths:
+  - tests/test_check_plan_delivery.py
+  covers: *id002
+  contract: Behavioral tests for bin/check-plan-delivery.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_plan_delivery.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-receipt
+  kind: pytest
+  selectors:
+  - tests/test_check_receipt.py
+  source_paths:
+  - tests/test_check_receipt.py
+  covers: *id002
+  contract: Behavioral coverage for durable, candidate-bound full-gate receipts.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_receipt.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-check-release-worktrees
+  kind: pytest
+  selectors:
+  - tests/test_check_release_worktrees.py
+  source_paths:
+  - tests/test_check_release_worktrees.py
+  covers: *id002
+  contract: 'Behavioral tests for the release worktree check: one clean checkout or a refusal.'
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_check_release_worktrees.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-chrome
+  kind: pytest
+  selectors:
+  - tests/test_chrome.py
+  source_paths:
+  - tests/test_chrome.py
+  covers: *id001
+  contract: 'Page construction: trusted markup, the inner frames, and their policies.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_chrome.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-claude-hook
+  kind: pytest
+  selectors:
+  - tests/test_claude_hook.py
+  source_paths:
+  - tests/test_claude_hook.py
+  covers: *id001
+  contract: The opt-in native example is source, not an installed hook or live approval.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_claude_hook.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-claude-permission
+  kind: pytest
+  selectors:
+  - tests/test_claude_permission.py
+  source_paths:
+  - tests/test_claude_permission.py
+  covers: *id001
+  contract: Native callback ownership, not a live Claude or GUI qualification.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_claude_permission.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-cli
+  kind: pytest
+  selectors:
+  - tests/test_cli.py
+  source_paths:
+  - tests/test_cli.py
+  covers: *id001
+  contract: 'The ``fenric`` command: invocation forms, output, and exit status.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_cli.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-docs
+  kind: pytest
+  selectors:
+  - tests/test_docs.py
+  source_paths:
+  - tests/test_docs.py
+  covers: *id001
+  contract: The user documentation shows what the Fenric that ships actually does.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_docs.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-documentation
+  kind: pytest
+  selectors:
+  - tests/test_documentation.py
+  source_paths:
+  - tests/test_documentation.py
+  covers: *id002
+  contract: 'Public documentation boundaries: curated inputs, built links, and release custody.'
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_documentation.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-engine
+  kind: pytest
+  selectors:
+  - tests/test_engine.py
+  source_paths:
+  - tests/test_engine.py
+  covers: *id001
+  contract: 'The request flow: one engine behind the command and the library.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_engine.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-execution-dashboard
+  kind: pytest
+  selectors:
+  - tests/test_execution_dashboard.py
+  source_paths:
+  - tests/test_execution_dashboard.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_execution_dashboard.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_execution_dashboard.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-execution-telemetry
+  kind: pytest
+  selectors:
+  - tests/test_execution_telemetry.py
+  source_paths:
+  - tests/test_execution_telemetry.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_execution_telemetry.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_execution_telemetry.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-gallery
+  kind: pytest
+  selectors:
+  - tests/test_gallery.py
+  source_paths:
+  - tests/test_gallery.py
+  covers: *id001
+  contract: Image manifests and direct image questions at their public collection boundaries.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_gallery.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-guidance
+  kind: pytest
+  selectors:
+  - tests/test_guidance.py
+  source_paths:
+  - tests/test_guidance.py
+  covers: *id001
+  contract: Owned instruction merge and read-path custody, in synthetic homes only.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_guidance.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-host
+  kind: pytest
+  selectors:
+  - tests/test_host.py
+  source_paths:
+  - tests/test_host.py
+  covers: *id001
+  contract: Synthetic host/callback proof; no native approval, coordinator or GUI is contacted.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_host.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-install-hooks
+  kind: pytest
+  selectors:
+  - tests/test_install_hooks.py
+  source_paths:
+  - tests/test_install_hooks.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_install_hooks.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_install_hooks.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-interaction
+  kind: pytest
+  selectors:
+  - tests/test_interaction.py
+  source_paths:
+  - tests/test_interaction.py
+  covers: *id001
+  contract: Private socket/engine integration with synthetic values, never a live GUI.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_interaction.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-kickoff-config
+  kind: pytest
+  selectors:
+  - tests/test_kickoff_config.py
+  source_paths:
+  - tests/test_kickoff_config.py
+  covers: *id002
+  contract: Behavioral tests for the universal kickoff configuration manager.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_kickoff_config.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-kickoff-control-plane
+  kind: pytest
+  selectors:
+  - tests/test_kickoff_control_plane.py
+  source_paths:
+  - tests/test_kickoff_control_plane.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_kickoff_control_plane.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_kickoff_control_plane.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-kickoff-evidence
+  kind: pytest
+  selectors:
+  - tests/test_kickoff_evidence.py
+  source_paths:
+  - tests/test_kickoff_evidence.py
+  covers: *id002
+  contract: Behavioral tests for run-scoped kickoff evidence.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_kickoff_evidence.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-kickoff-tree-id
+  kind: pytest
+  selectors:
+  - tests/test_kickoff_tree_id.py
+  source_paths:
+  - tests/test_kickoff_tree_id.py
+  covers: *id002
+  contract: Behavioral tests for complete kickoff candidate identity.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_kickoff_tree_id.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-lessons
+  kind: pytest
+  selectors:
+  - tests/test_lessons.py
+  source_paths:
+  - tests/test_lessons.py
+  covers: *id002
+  contract: Behavioral tests for the lessons ledger tool (policies/lessons.md).
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_lessons.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-lifecycle
+  kind: pytest
+  selectors:
+  - tests/test_lifecycle.py
+  source_paths:
+  - tests/test_lifecycle.py
+  covers: *id001
+  contract: Filesystem custody and data-only planning in synthetic installations.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_lifecycle.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-log-control-plane
+  kind: pytest
+  selectors:
+  - tests/test_log_control_plane.py
+  source_paths:
+  - tests/test_log_control_plane.py
+  covers: *id002
+  contract: Retained shared normalization boundary after flat-log tool retirement.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_log_control_plane.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-markdown
+  kind: pytest
+  selectors:
+  - tests/test_markdown.py
+  source_paths:
+  - tests/test_markdown.py
+  covers: *id001
+  contract: Selected document snapshots, unsafe content and acknowledgment boundaries.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_markdown.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-media-examples
+  kind: pytest
+  selectors:
+  - tests/test_media_examples.py
+  source_paths:
+  - tests/test_media_examples.py
+  covers: *id001
+  contract: The public media recipes collect/render only under scripted test custody.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_media_examples.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-mirror-parity
+  kind: pytest
+  selectors:
+  - tests/test_mirror_parity.py
+  source_paths:
+  - tests/test_mirror_parity.py
+  covers: *id002
+  contract: Behavioral tests for deterministic cross-harness parity enforcement.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_mirror_parity.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-multioperator
+  kind: pytest
+  selectors:
+  - tests/test_multioperator.py
+  source_paths:
+  - tests/test_multioperator.py
+  covers: *id002
+  contract: Portable synthetic migration and current-record contracts; no donor history required.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_multioperator.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-mutation
+  kind: pytest
+  selectors:
+  - tests/test_mutation.py
+  source_paths:
+  - tests/test_mutation.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_mutation.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_mutation.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-new-name
+  kind: pytest
+  selectors:
+  - tests/test_new_name.py
+  source_paths:
+  - tests/test_new_name.py
+  covers: *id002
+  contract: Behavioral tests for bin/new-name (ledger slug generator).
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_new_name.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-packaging
+  kind: pytest
+  selectors:
+  - tests/test_packaging.py
+  source_paths:
+  - tests/test_packaging.py
+  covers: *id001
+  contract: The built wheel and source archive carry exactly what they should.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_packaging.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-pre-commit
+  kind: pytest
+  selectors:
+  - tests/test_pre_commit.py
+  source_paths:
+  - tests/test_pre_commit.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_pre_commit.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_pre_commit.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-protocol
+  kind: pytest
+  selectors:
+  - tests/test_protocol.py
+  source_paths:
+  - tests/test_protocol.py
+  covers: *id001
+  contract: Independent wire bytes and refusal boundaries, without a GUI or native host.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_protocol.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-remote
+  kind: pytest
+  selectors:
+  - tests/test_remote.py
+  source_paths:
+  - tests/test_remote.py
+  covers: *id001
+  contract: Remote public contracts over real loopback HTTP and owned process boundaries.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_remote.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-research-authority
+  kind: pytest
+  selectors:
+  - tests/test_research_authority.py
+  source_paths:
+  - tests/test_research_authority.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_research_authority.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_research_authority.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-result
+  kind: pytest
+  selectors:
+  - tests/test_result.py
+  source_paths:
+  - tests/test_result.py
+  covers: *id001
+  contract: 'Result validation: a window''s payload is checked against its spec.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_result.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-review-verdicts
+  kind: pytest
+  selectors:
+  - tests/test_review_verdicts.py
+  source_paths:
+  - tests/test_review_verdicts.py
+  covers: *id002
+  contract: Behavioral tests for bin/review-verdicts.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_review_verdicts.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-sanitize
+  kind: pytest
+  selectors:
+  - tests/test_sanitize.py
+  source_paths:
+  - tests/test_sanitize.py
+  covers: *id001
+  contract: The allowlist sanitizer for untrusted ``custom`` HTML.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_sanitize.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-secret
+  kind: pytest
+  selectors:
+  - tests/test_secret.py
+  source_paths:
+  - tests/test_secret.py
+  covers: *id001
+  contract: Secret capture through a real store subprocess.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_secret.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-security
+  kind: pytest
+  selectors:
+  - tests/test_security.py
+  source_paths:
+  - tests/test_security.py
+  covers: *id001
+  contract: No diagnostic, in any failure, quotes a value from the spec or the person.
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_security.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-shell-syntax
+  kind: pytest
+  selectors:
+  - tests/test_shell_syntax.py
+  source_paths:
+  - tests/test_shell_syntax.py
+  covers: *id002
+  contract: Behavioral tests for bin/check-shell-syntax.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_shell_syntax.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-spec
+  kind: pytest
+  selectors:
+  - tests/test_spec.py
+  source_paths:
+  - tests/test_spec.py
+  covers: *id001
+  contract: 'Spec validation: what is accepted, and that every refusal is value-free.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_spec.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: fenric-target
+  kind: pytest
+  selectors:
+  - tests/test_target.py
+  source_paths:
+  - tests/test_target.py
+  covers: *id001
+  contract: 'Secrets written into a file: format detection, in-place update, refusal.'
+  risk_class: product-behavior
+  oracle: The assertions in tests/test_target.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-test-governance
+  kind: pytest
+  selectors:
+  - tests/test_test_governance.py
+  source_paths:
+  - tests/test_test_governance.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_test_governance.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_test_governance.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-toolchain-callers
+  kind: pytest
+  selectors:
+  - tests/test_toolchain_callers.py
+  source_paths:
+  - tests/test_toolchain_callers.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_toolchain_callers.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_toolchain_callers.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-toolchain-entrypoints
+  kind: pytest
+  selectors:
+  - tests/test_toolchain_entrypoints.py
+  source_paths:
+  - tests/test_toolchain_entrypoints.py
+  covers: *id002
+  contract: The methodology behavior exercised by tests/test_toolchain_entrypoints.py holds.
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_toolchain_entrypoints.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: methodology-treatise
+  kind: pytest
+  selectors:
+  - tests/test_treatise.py
+  source_paths:
+  - tests/test_treatise.py
+  covers: *id002
+  contract: Behavioral tests for the treatise editorial-record tool (policies/treatise.md).
+  risk_class: methodology-tooling
+  oracle: The assertions in tests/test_treatise.py against the behavior its contract names.
+  admission: Baseline proof frozen at methodology adoption on 2026-11-20; review pending.
+  nearest_overlap: Not yet assessed; recorded for bounded review.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-changed
+  kind: gate
+  selectors:
+  - changed
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-format
+  kind: gate
+  selectors:
+  - format
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-lint
+  kind: gate
+  selectors:
+  - lint
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-candidate-partition
+  kind: gate
+  selectors:
+  - policy-candidate-partition
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-catalogs
+  kind: gate
+  selectors:
+  - policy-catalogs
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-config
+  kind: gate
+  selectors:
+  - policy-config
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-docs
+  kind: gate
+  selectors:
+  - policy-docs
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-execution-dashboards
+  kind: gate
+  selectors:
+  - policy-execution-dashboards
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-harness-parity
+  kind: gate
+  selectors:
+  - policy-harness-parity
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-hooks-installed
+  kind: gate
+  selectors:
+  - policy-hooks-installed
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-lessons
+  kind: gate
+  selectors:
+  - policy-lessons
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-log
+  kind: gate
+  selectors:
+  - policy-log
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-shell-syntax
+  kind: gate
+  selectors:
+  - policy-shell-syntax
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-test-governance
+  kind: gate
+  selectors:
+  - policy-test-governance
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-test-time
+  kind: gate
+  selectors:
+  - policy-test-time
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-toolchain-callers
+  kind: gate
+  selectors:
+  - policy-toolchain-callers
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-policy-treatise
+  kind: gate
+  selectors:
+  - policy-treatise
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-test
+  kind: gate
+  selectors:
+  - test
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: gate-vital
+  kind: gate
+  selectors:
+  - vital
+  source_paths:
+  - bin/check
+  covers:
+  - bin/check
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: hook-githooks-pre-commit-bin-check-harness-parity
+  kind: hook
+  selectors:
+  - hook:.githooks/pre-commit:./bin/check-harness-parity
+  source_paths:
+  - .githooks/pre-commit
+  covers:
+  - .githooks/pre-commit
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: hook-githooks-pre-commit-bin-check-toolchain-callers
+  kind: hook
+  selectors:
+  - hook:.githooks/pre-commit:./bin/check-toolchain-callers
+  source_paths:
+  - .githooks/pre-commit
+  covers:
+  - .githooks/pre-commit
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: hook-githooks-pre-commit-bin-multioperator-validate--root--staged
+  kind: hook
+  selectors:
+  - hook:.githooks/pre-commit:./bin/multioperator validate --root . --staged
+  source_paths:
+  - .githooks/pre-commit
+  covers:
+  - .githooks/pre-commit
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: hook-githooks-pre-commit-bin-check-candidate-partition--staged
+  kind: hook
+  selectors:
+  - hook:.githooks/pre-commit:./bin/check-candidate-partition --staged
+  source_paths:
+  - .githooks/pre-commit
+  covers:
+  - .githooks/pre-commit
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []
+- id: hook-githooks-pre-commit-bin-test-governance-validate
+  kind: hook
+  selectors:
+  - hook:.githooks/pre-commit:./bin/test-governance validate
+  source_paths:
+  - .githooks/pre-commit
+  covers:
+  - .githooks/pre-commit
+  contract: The structural proof remains executable in the authoritative repository lifecycle.
+  risk_class: lifecycle-custody
+  oracle: The named gate or hook command remains present and fails the lifecycle step on error.
+  admission: Retained as direct lifecycle wiring rather than a substitute for behavioral proof.
+  nearest_overlap: Behavioral families prove implementations; this proof uniquely binds the lifecycle
+    step.
+  tier: vital
+  flake_rate: 0
+  replacement_lineage: []

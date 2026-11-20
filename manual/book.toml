@@ -1,0 +1,28 @@
+[book]
+title = "Fenric Manual"
+authors = ["Wolf McNally"]
+description = "Ask a person something from an agent or script and get a structured answer back."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "../.kickoff/manual"
+create-missing = false
+
+[preprocessor.admonish]
+command = "mdbook-admonish"
+assets_version = "3.0.3" # do not edit: managed by `mdbook-admonish install`
+on_failure = "bail"
+
+[output.html]
+site-url = "/fenric/"
+additional-css = ["mdbook-admonish.css"]
+
+[output.html.playground]
+runnable = false
+
+[output.html.search]
+enable = true
+
+[output.html.print]
+enable = true

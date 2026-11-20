@@ -1404,7 +1404,7 @@ def test_secret_effect_and_receipt(
             "mode,name=sys.argv[2:]\n"
             "(directory/name).write_text(sys.stdin.read())\n"
             "with (directory/'calls').open('a') as calls: calls.write(name+'\\n')\n"
-            "if mode=='timeout': time.sleep(2)\n"
+            "if mode=='timeout': time.sleep(30)\n"
             "if name=='SECOND': sys.exit(1)\n"
         )
         message = _request(tmp_path / (mode + ".env"))
@@ -1459,7 +1459,8 @@ def test_secret_effect_and_receipt(
                 and not (directory / "calls").exists()
             )
         with monkeypatch.context() as scoped:
-            scoped.setattr("fenric.store.STORE_TIMEOUT_SECONDS", 0.15)
+            # The helper must start and write before the timeout fires, even on a loaded machine.
+            scoped.setattr("fenric.store.STORE_TIMEOUT_SECONDS", 3)
             result, frames = _exchange(
                 _rehash(message),
                 returns(

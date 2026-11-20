@@ -651,7 +651,8 @@ sys.exit(1)
             return direct.open(request, timeout=timeout)
 
     monkeypatch.setattr(remote.urllib.request, "build_opener", lambda *args: Proxy())
-    monkeypatch.setattr(remote, "SETUP_SECONDS", 0.8)
+    # Spawned stand-ins need room on a loaded machine; dialog() still waits 3 s for the status.
+    monkeypatch.setattr(remote, "SETUP_SECONDS", 2.0)
     monkeypatch.setattr(remote, "PROBE_SECONDS", 1)
     monkeypatch.setattr(remote, "TERMINAL_SECONDS", 0.1)
     # The constructor default is production's 4s; hang proof uses its real budget.
@@ -1290,12 +1291,14 @@ def test_remote_desktop_race_stores_once_and_replays(tailnet, tmp_path, capfd):
 
 
 def test_visits_touch_timeout_and_caller_cancel_share_clock(tailnet, monkeypatch):
-    monkeypatch.setattr(backend, "HARD_LIMIT_SECONDS", 1.5)
+    # The dialog clock must outlast remote setup on a loaded machine; every bound below keeps
+    # its original proportion to the dialog timeout.
+    monkeypatch.setattr(backend, "HARD_LIMIT_SECONDS", 6.0)
     monkeypatch.setattr(backend, "SAFETY_NET_SECONDS", 0.02)
     monkeypatch.setattr(backend, "POLL_SECONDS", 0.01)
     cancel = threading.Event()
     renderer, transport, thread, answers, _ = dialog(
-        tailnet, {**CONFIRM, "timeout": 0.6}, cancel=cancel
+        tailnet, {**CONFIRM, "timeout": 2.4}, cancel=cancel
     )
     try:
         before = renderer.session.state()["remaining"]
@@ -1309,7 +1312,7 @@ def test_visits_touch_timeout_and_caller_cancel_share_clock(tailnet, monkeypatch
             )[0]
             == 200
         )
-        time.sleep(max(0, renderer.session.started + 0.63 - time.monotonic()))
+        time.sleep(max(0, renderer.session.started + 2.43 - time.monotonic()))
         assert not renderer.session.done.is_set()
         assert renderer.session.state()["touched"] is True
         assert (
@@ -1324,8 +1327,8 @@ def test_visits_touch_timeout_and_caller_cancel_share_clock(tailnet, monkeypatch
     finally:
         end(renderer, thread)
     assert answers[0].status == "cancelled"
-    renderer, _, thread, answers, _ = dialog(tailnet, {**CONFIRM, "timeout": 0.6})
-    assert renderer.session.done.wait(0.8)
+    renderer, _, thread, answers, _ = dialog(tailnet, {**CONFIRM, "timeout": 2.4})
+    assert renderer.session.done.wait(3.2)
     end(renderer, thread)
     assert answers[0].detail == "timed out"
 
@@ -1491,6 +1494,8 @@ def test_machine_config_and_failures_report_once_without_blocking_desktop(
         assert run(CONFIRM, backend=AwaitStatus(), remote_status=statuses.append).value is True
         assert len(statuses) == 1 and statuses[0]["reason"] == expected
         (directory / "info.json").write_text(json.dumps(original))
+    # A hung status query must not hold the desktop: keep the short budget this bound measures.
+    monkeypatch.setattr(remote, "SETUP_SECONDS", 0.8)
     (directory / "hang").touch()
     statuses.clear()
     started = time.monotonic()

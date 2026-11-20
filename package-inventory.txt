@@ -56,7 +56,6 @@ fenric/target.py
 .python-version
 AGENTS.md
 CHANGELOG.md
-CLAUDE.md
 CONTRIBUTING.md
 LICENSE
 PKG-INFO
